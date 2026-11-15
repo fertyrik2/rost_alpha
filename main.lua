@@ -1,4 +1,4 @@
---[[ ROST ALPHA | Premium UI + Full ESP + Silent Aim (Fixed) ]]
+--[[ ROST ALPHA | Premium UI + Full ESP + Silent Aim (ZIndex Fix) ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -42,10 +42,10 @@ local function StartCheat()
     Players.PlayerAdded:Connect(function(p) playerCache[p] = true end)
     Players.PlayerRemoving:Connect(function(p) playerCache[p] = nil end)
 
-    -- Меню (разделили кнопку и окно)
+    -- Меню
     local MenuGui = Instance.new("ScreenGui"); MenuGui.Name = "sg_" .. rnd(); MenuGui.ResetOnSpawn = false; MenuGui.IgnoreGuiInset = true; MenuGui.DisplayOrder = 50; MenuGui.Parent = GuiParent
     
-    -- Кнопка "F" (всегда сверху)
+    -- Кнопка "F"
     local ToggleBtn = Instance.new("TextButton"); ToggleBtn.Size = UDim2.new(0, 50, 0, 50); ToggleBtn.Position = UDim2.new(0.5, -25, 0.5, -25); ToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 80, 255); ToggleBtn.Text = "F"; ToggleBtn.TextColor3 = Color3.new(1,1,1); ToggleBtn.Font = Enum.Font.GothamBold; ToggleBtn.TextSize = 20; ToggleBtn.Parent = MenuGui
     Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
     ToggleBtn.ZIndex = 100
@@ -67,19 +67,23 @@ local function StartCheat()
         end
     end)
 
-    -- Главное окно (в отдельном слое)
+    -- Главное окно
     local MainFrame = Instance.new("Frame"); MainFrame.Size = UDim2.new(0, 380, 0, 280); MainFrame.Position = UDim2.new(0.5, -190, 0.5, -140); MainFrame.BackgroundColor3 = Color3.fromRGB(18, 12, 24); MainFrame.Visible = false; MainFrame.Parent = MenuGui
-    MainFrame.ZIndex = 10
+    MainFrame.ZIndex = 5
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
     ToggleBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
 
     local Sidebar = Instance.new("Frame"); Sidebar.Size = UDim2.new(0, 100, 1, 0); Sidebar.BackgroundColor3 = Color3.fromRGB(12, 8, 18); Sidebar.Parent = MainFrame
+    Sidebar.ZIndex = 6
     Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 8)
+    
     local Content = Instance.new("Frame"); Content.Size = UDim2.new(1, -100, 1, -10); Content.Position = UDim2.new(0, 100, 0, 5); Content.BackgroundTransparency = 1; Content.Parent = MainFrame
+    Content.ZIndex = 7
 
     local Tabs = {}
     local function CreateTab(name, icon)
         local btn = Instance.new("TextButton"); btn.Size = UDim2.new(1, -10, 0, 25); btn.Position = UDim2.new(0, 5, 0, 50 + (#Tabs * 30)); btn.BackgroundTransparency = 1; btn.Text = " " .. icon .. " " .. name; btn.TextColor3 = Color3.fromRGB(150, 150, 150); btn.Font = Enum.Font.GothamMedium; btn.TextSize = 12; btn.TextXAlignment = Enum.TextXAlignment.Left; btn.Parent = Sidebar
+        btn.ZIndex = 8
         table.insert(Tabs, {btn = btn, name = name})
         btn.MouseButton1Click:Connect(function()
             for _, t in ipairs(Tabs) do t.btn.TextColor3 = Color3.fromRGB(150, 150, 150) end
@@ -89,6 +93,7 @@ local function StartCheat()
             if name == "Combat" then
                 local function AddToggle(tName, key, pos)
                     local b = Instance.new("TextButton"); b.Size = UDim2.new(1, -10, 0, 30); b.Position = UDim2.new(0, 5, 0, pos); b.BackgroundColor3 = Color3.fromRGB(25, 15, 35); b.Text = tName .. ": " .. (Config[key] and "ON" or "OFF"); b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.Gotham; b.TextSize = 13; b.Parent = Content
+                    b.ZIndex = 9
                     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
                     b.MouseButton1Click:Connect(function() Config[key] = not Config[key]; b.Text = tName .. ": " .. (Config[key] and "ON" or "OFF") end)
                 end
@@ -97,11 +102,16 @@ local function StartCheat()
                 
                 -- FOV Slider
                 local fovFrame = Instance.new("Frame"); fovFrame.Size = UDim2.new(1, -10, 0, 45); fovFrame.Position = UDim2.new(0, 5, 0, 80); fovFrame.BackgroundColor3 = Color3.fromRGB(25, 15, 35); fovFrame.Parent = Content
+                fovFrame.ZIndex = 9
                 Instance.new("UICorner", fovFrame).CornerRadius = UDim.new(0, 4)
                 local fovText = Instance.new("TextLabel"); fovText.Size = UDim2.new(1, -20, 0, 15); fovText.Position = UDim2.new(0, 10, 0, 5); fovText.BackgroundTransparency = 1; fovText.Text = "FOV Radius: " .. Config.FOV; fovText.TextColor3 = Color3.new(1,1,1); fovText.Font = Enum.Font.Gotham; fovText.TextSize = 12; fovText.TextXAlignment = Enum.TextXAlignment.Left; fovText.Parent = fovFrame
+                fovText.ZIndex = 10
                 local fovBar = Instance.new("Frame"); fovBar.Size = UDim2.new(1, -20, 0, 4); fovBar.Position = UDim2.new(0, 10, 0, 25); fovBar.BackgroundColor3 = Color3.fromRGB(50, 50, 60); fovBar.Parent = fovFrame
+                fovBar.ZIndex = 10
                 local fovFill = Instance.new("Frame"); fovFill.Size = UDim2.new((Config.FOV - 20) / 280, 0, 1, 0); fovFill.BackgroundColor3 = Color3.fromRGB(150, 80, 255); fovFill.Parent = fovBar
+                fovFill.ZIndex = 11
                 local fovInput = Instance.new("TextButton"); fovInput.Size = UDim2.new(1, 20, 1, 20); fovInput.Position = UDim2.new(0, -10, 0, -10); fovInput.BackgroundTransparency = 1; fovInput.Text = ""; fovInput.Parent = fovBar
+                fovInput.ZIndex = 12
                 local fovDragging = false
                 fovInput.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then fovDragging = true end end)
                 UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then fovDragging = false end end)
@@ -117,6 +127,7 @@ local function StartCheat()
             elseif name == "Visual" then
                 local function AddToggle(tName, key, pos)
                     local b = Instance.new("TextButton"); b.Size = UDim2.new(1, -10, 0, 30); b.Position = UDim2.new(0, 5, 0, pos); b.BackgroundColor3 = Color3.fromRGB(25, 15, 35); b.Text = tName .. ": " .. (Config[key] and "ON" or "OFF"); b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.Gotham; b.TextSize = 13; b.Parent = Content
+                    b.ZIndex = 9
                     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
                     b.MouseButton1Click:Connect(function() Config[key] = not Config[key]; b.Text = tName .. ": " .. (Config[key] and "ON" or "OFF") end)
                 end
@@ -129,6 +140,7 @@ local function StartCheat()
             elseif name == "Player" then
                 local function AddToggle(tName, key, pos)
                     local b = Instance.new("TextButton"); b.Size = UDim2.new(1, -10, 0, 30); b.Position = UDim2.new(0, 5, 0, pos); b.BackgroundColor3 = Color3.fromRGB(25, 15, 35); b.Text = tName .. ": " .. (Config[key] and "ON" or "OFF"); b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.Gotham; b.TextSize = 13; b.Parent = Content
+                    b.ZIndex = 9
                     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
                     b.MouseButton1Click:Connect(function() Config[key] = not Config[key]; b.Text = tName .. ": " .. (Config[key] and "ON" or "OFF") end)
                 end
@@ -210,7 +222,6 @@ local function StartCheat()
             end
         end
 
-        -- Хук аима
         _G.CurrentTarget = closest
 
         -- Speed
