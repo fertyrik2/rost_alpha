@@ -1,4 +1,4 @@
---[[ ROST ALPHA | Premium UI + Full ESP + Silent Aim ]]
+--[[ ROST ALPHA | Premium UI + Full ESP + Silent Aim (Fixed) ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -42,10 +42,13 @@ local function StartCheat()
     Players.PlayerAdded:Connect(function(p) playerCache[p] = true end)
     Players.PlayerRemoving:Connect(function(p) playerCache[p] = nil end)
 
-    -- Меню
-    local MenuGui = Instance.new("ScreenGui"); MenuGui.Name = "sg_" .. rnd(); MenuGui.ResetOnSpawn = false; MenuGui.IgnoreGuiInset = true; MenuGui.Parent = GuiParent
+    -- Меню (разделили кнопку и окно)
+    local MenuGui = Instance.new("ScreenGui"); MenuGui.Name = "sg_" .. rnd(); MenuGui.ResetOnSpawn = false; MenuGui.IgnoreGuiInset = true; MenuGui.DisplayOrder = 50; MenuGui.Parent = GuiParent
+    
+    -- Кнопка "F" (всегда сверху)
     local ToggleBtn = Instance.new("TextButton"); ToggleBtn.Size = UDim2.new(0, 50, 0, 50); ToggleBtn.Position = UDim2.new(0.5, -25, 0.5, -25); ToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 80, 255); ToggleBtn.Text = "F"; ToggleBtn.TextColor3 = Color3.new(1,1,1); ToggleBtn.Font = Enum.Font.GothamBold; ToggleBtn.TextSize = 20; ToggleBtn.Parent = MenuGui
     Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
+    ToggleBtn.ZIndex = 100
     
     local dragging, dragInput, dragStart, startPos
     ToggleBtn.InputBegan:Connect(function(input)
@@ -64,7 +67,9 @@ local function StartCheat()
         end
     end)
 
+    -- Главное окно (в отдельном слое)
     local MainFrame = Instance.new("Frame"); MainFrame.Size = UDim2.new(0, 380, 0, 280); MainFrame.Position = UDim2.new(0.5, -190, 0.5, -140); MainFrame.BackgroundColor3 = Color3.fromRGB(18, 12, 24); MainFrame.Visible = false; MainFrame.Parent = MenuGui
+    MainFrame.ZIndex = 10
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
     ToggleBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
 
@@ -205,7 +210,7 @@ local function StartCheat()
             end
         end
 
-        -- Хук аима (сохраняем переменную для перехвата)
+        -- Хук аима
         _G.CurrentTarget = closest
 
         -- Speed
