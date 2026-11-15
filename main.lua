@@ -1,4 +1,4 @@
---[[ ROST ALPHA | Premium UI + Silent Aim + Camera Lock + Full ESP ]]
+--[[ ROST ALPHA | Full Access (Free) ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -18,7 +18,7 @@ local KEY_DATABASE = {
 local UserRole = "free"
 
 local Config = {
-    Aim_Enabled = false, Aim_Mode = "Silent", -- "Silent" или "Camera"
+    Aim_Enabled = false, Aim_Mode = "Silent",
     TargetPart = "Head", FOV = 150, WallCheck = false,
     ESP_Enabled = false, ESP_Box = true, ESP_Name = true, ESP_Dist = true, ESP_HP = true, ESP_Skeleton = false,
     Speed_Enabled = false, Speed_Value = 30, Fullbright = false
@@ -107,7 +107,6 @@ local function StartCheat()
                 AddToggle("Aim (Master)", "Aim_Enabled", 5)
                 AddToggle("Wall Check", "WallCheck", 40)
                 
-                -- Переключатель режима (Silent / Camera)
                 local modeBtn = Instance.new("TextButton"); modeBtn.Size = UDim2.new(1, -10, 0, 30); modeBtn.Position = UDim2.new(0, 5, 0, 80); modeBtn.BackgroundColor3 = Color3.fromRGB(50, 30, 70); modeBtn.Text = "Mode: " .. Config.Aim_Mode; modeBtn.TextColor3 = Color3.new(1,1,1); modeBtn.Font = Enum.Font.GothamBold; modeBtn.TextSize = 13; modeBtn.Parent = Content
                 modeBtn.ZIndex = 9
                 Instance.new("UICorner", modeBtn).CornerRadius = UDim.new(0, 4)
@@ -116,7 +115,6 @@ local function StartCheat()
                     modeBtn.Text = "Mode: " .. Config.Aim_Mode
                 end)
 
-                -- FOV Slider
                 local fovFrame = Instance.new("Frame"); fovFrame.Size = UDim2.new(1, -10, 0, 45); fovFrame.Position = UDim2.new(0, 5, 0, 120); fovFrame.BackgroundColor3 = Color3.fromRGB(25, 15, 35); fovFrame.Parent = Content
                 fovFrame.ZIndex = 9
                 Instance.new("UICorner", fovFrame).CornerRadius = UDim.new(0, 4)
@@ -191,7 +189,7 @@ local function StartCheat()
     local OldLighting = {Ambient = Lighting.Ambient, OutdoorAmbient = Lighting.OutdoorAmbient, Brightness = Lighting.Brightness}
     local CurrentTarget = nil
 
-    -- Главный цикл (ESP + FOV)
+    -- Главный цикл
     RunService.RenderStepped:Connect(function()
         local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
         local closest, minDist = nil, Config.FOV
@@ -252,7 +250,7 @@ local function StartCheat()
         end
     end)
 
-    -- Camera Lock (Для луков)
+    -- Camera Lock
     local oldCFrame = nil
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
@@ -264,7 +262,7 @@ local function StartCheat()
         end
     end)
 
-    -- Silent Aim Hook (Для пуль)
+    -- Silent Aim Hook
     if hookmetamethod and getnamecallmethod then
         local oldNamecall
         oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
