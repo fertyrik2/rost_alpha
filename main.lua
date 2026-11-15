@@ -1,4 +1,4 @@
---[[ ROST ALPHA | Vomagla Style Offset Aim + ESP ]]
+--[[ ROST ALPHA | Ultimate Aim + Projectile Magnet ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -22,7 +22,7 @@ local Config = {
     TargetPart = "Head", FOV = 150, WallCheck = false, MaxDist = 3000,
     ESP_Enabled = false, ESP_Box = true, ESP_Name = true, ESP_Dist = true, ESP_HP = true, ESP_Skeleton = false,
     Speed_Enabled = false, Speed_Value = 30, Fullbright = false,
-    FOV_Offset_Y = 80 -- СМЕЩЕНИЕ КРУГА ВНИЗ (в пикселях). Можешь подкрутить в меню.
+    FOV_Offset_Y = 80
 }
 
 -- ==========================================
@@ -50,7 +50,6 @@ local function StartCheat()
     -- FOV Круг
     local FOV_Gui = Instance.new("ScreenGui"); FOV_Gui.Name = "sg_" .. rnd(); FOV_Gui.ResetOnSpawn = false; FOV_Gui.IgnoreGuiInset = true; FOV_Gui.DisplayOrder = 40; FOV_Gui.Parent = GuiParent
     local FOV_Frame = Instance.new("Frame"); FOV_Frame.Name = "f_" .. rnd(); FOV_Frame.BackgroundTransparency = 1; FOV_Frame.AnchorPoint = Vector2.new(0.5, 0.5); 
-    -- СМЕЩАЕМ КРУГ ВНИЗ (на 80 пикселей)
     FOV_Frame.Position = UDim2.new(0.5, 0, 0.5, Config.FOV_Offset_Y); 
     FOV_Frame.Size = UDim2.new(0, Config.FOV * 2, 0, Config.FOV * 2); FOV_Frame.Visible = false; FOV_Frame.Parent = FOV_Gui
     local FOV_Corner = Instance.new("UICorner"); FOV_Corner.CornerRadius = UDim.new(1, 0); FOV_Corner.Parent = FOV_Frame
@@ -117,7 +116,6 @@ local function StartCheat()
                 modeBtn.MouseButton1Click:Connect(function()
                     if Config.Aim_Mode == "Silent" then Config.Aim_Mode = "Camera" else Config.Aim_Mode = "Silent" end
                     modeBtn.Text = "Mode: " .. Config.Aim_Mode
-                    -- При смене режима круг возвращается в центр или смещается
                     if Config.Aim_Mode == "Camera" then
                         FOV_Frame.Position = UDim2.new(0.5, 0, 0.6, 0) 
                     else
@@ -200,7 +198,6 @@ local function StartCheat()
 
     -- Главный цикл
     RunService.RenderStepped:Connect(function()
-        -- Смещаем центр поиска цели на 80 пикселей вниз
         local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2 + Config.FOV_Offset_Y)
         local closest, minDist = nil, Config.FOV
 
@@ -239,7 +236,6 @@ local function StartCheat()
                 if e.box then e.box.Visible = false end; if e.name then e.name.Visible = false end; if e.dist then e.dist.Visible = false end; if e.hpBg then e.hpBg.Visible = false; e.hpFill.Visible = false end
             end
 
-            -- Поиск цели относительно СМЕЩЕННОГО центра
             if Config.Aim_Enabled and hum and hum.Health > 0 and head then
                 local sp, vis2 = Camera:WorldToViewportPoint(head.Position)
                 if vis2 then
@@ -255,7 +251,6 @@ local function StartCheat()
         CurrentTarget = closest
         _G.CurrentTarget = closest
 
-        -- Меняем цвет FOV круга
         if Config.Aim_Enabled then
             if CurrentTarget then
                 FOV_Stroke.Color = Color3.fromRGB(0, 255, 0)
@@ -285,7 +280,7 @@ local function StartCheat()
         end
     end)
 
-    -- Silent Aim Hook (Идеальное попадание)
+    -- Silent Aim Hook
     if hookmetamethod and getnamecallmethod then
         local oldNamecall
         oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
@@ -303,6 +298,33 @@ local function StartCheat()
                 end
             end
             return oldNamecall(self, ...)
+        end)
+    end
+
+    -- ==========================================
+    -- ПЕРЕХВАТ СТРЕЛ (PROJECTILE MAGNET)
+    -- ==========================================
+    local BulletsFolder = Workspace:WaitForChild("Bullets", 10)
+    
+    if BulletsFolder then
+        BulletsFolder.DescendantAdded:Connect(function(obj)
+            if Config.Aim_Enabled and Config.Aim_Mode == "Silent" and _G.CurrentTarget then
+                if obj.Name == "Arrow" or obj.Name:find("Bullet") or obj.Name == "Projectile" then
+                    task.wait(0.01) 
+                    if _G.CurrentTarget and _G.CurrentTarget.Parent then
+                        local targetPos = _G.CurrentTarget.Position
+                        if obj:IsA("BasePart") then
+                            obj.CFrame = CFrame.new(targetPos)
+                        else
+                            local primary = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                            if primary then
+                                obj:SetPrimaryPartCFrame(CFrame.new(targetPos))
+                                primary.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                            end
+                        end
+                    end
+                end
+            end
         end)
     end
 end
