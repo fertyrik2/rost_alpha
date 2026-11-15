@@ -1,4 +1,4 @@
---[[ ROST ALPHA | Premium UI + Full ESP + Silent Aim + FOV + Fullbright ]]
+--[[ ROST ALPHA | Premium UI + Full ESP + Camera Lock Aim ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -103,7 +103,7 @@ local function StartCheat()
                     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
                     b.MouseButton1Click:Connect(function() Config[key] = not Config[key]; b.Text = tName .. ": " .. (Config[key] and "ON" or "OFF") end)
                 end
-                AddToggle("Silent Aim", "Aim_Enabled", 5)
+                AddToggle("Camera Lock (All Weapons)", "Aim_Enabled", 5)
                 AddToggle("Wall Check", "WallCheck", 40)
                 
                 -- FOV Slider
@@ -178,26 +178,20 @@ local function StartCheat()
     for _, p in ipairs(Players:GetPlayers()) do CreateESP(p) end
     Players.PlayerAdded:Connect(function(p) CreateESP(p) end)
 
-    -- Сохранение старых настроек освещения
     local OldLighting = {Ambient = Lighting.Ambient, OutdoorAmbient = Lighting.OutdoorAmbient, Brightness = Lighting.Brightness}
+    local CurrentTarget = nil
 
-    -- Главный цикл
+    -- Логика аима (Camera Lock)
     RunService.RenderStepped:Connect(function()
         local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
         local closest, minDist = nil, Config.FOV
 
-        -- FOV Круг
         FOV_Frame.Visible = Config.Aim_Enabled
 
-        -- Fullbright
         if Config.Fullbright then
-            Lighting.Ambient = Color3.fromRGB(255, 255, 255)
-            Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
-            Lighting.Brightness = 2
+            Lighting.Ambient = Color3.fromRGB(255, 255, 255); Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255); Lighting.Brightness = 2
         else
-            Lighting.Ambient = OldLighting.Ambient
-            Lighting.OutdoorAmbient = OldLighting.OutdoorAmbient
-            Lighting.Brightness = OldLighting.Brightness
+            Lighting.Ambient = OldLighting.Ambient; Lighting.OutdoorAmbient = OldLighting.OutdoorAmbient; Lighting.Brightness = OldLighting.Brightness
         end
 
         for plr, e in pairs(ESP) do
@@ -212,19 +206,9 @@ local function StartCheat()
                 if vis and hpos.Z > 0 then
                     local size = math.abs(hpos.Y - pos.Y) * 1.5
                     local dist = (LP.Character.HumanoidRootPart.Position - hrp.Position).Magnitude
-                    
-                    if e.box and Config.ESP_Box then
-                        e.box.Visible = true; e.box.Size = Vector2.new(size * 0.6, size); e.box.Position = Vector2.new(pos.X - size*0.3, pos.Y - size/2)
-                    elseif e.box then e.box.Visible = false end
-                    
-                    if e.name and Config.ESP_Name then
-                        e.name.Visible = true; e.name.Text = plr.Name; e.name.Position = Vector2.new(pos.X, hpos.Y - 20)
-                    elseif e.name then e.name.Visible = false end
-
-                    if e.dist and Config.ESP_Dist then
-                        e.dist.Visible = true; e.dist.Text = math.floor(dist) .. "m"; e.dist.Position = Vector2.new(pos.X, pos.Y + size/2 + 5)
-                    elseif e.dist then e.dist.Visible = false end
-
+                    if e.box and Config.ESP_Box then e.box.Visible = true; e.box.Size = Vector2.new(size * 0.6, size); e.box.Position = Vector2.new(pos.X - size*0.3, pos.Y - size/2) elseif e.box then e.box.Visible = false end
+                    if e.name and Config.ESP_Name then e.name.Visible = true; e.name.Text = plr.Name; e.name.Position = Vector2.new(pos.X, hpos.Y - 20) elseif e.name then e.name.Visible = false end
+                    if e.dist and Config.ESP_Dist then e.dist.Visible = true; e.dist.Text = math.floor(dist) .. "m"; e.dist.Position = Vector2.new(pos.X, pos.Y + size/2 + 5) elseif e.dist then e.dist.Visible = false end
                     if e.hpBg and e.hpFill and Config.ESP_HP then
                         e.hpBg.Visible = true; e.hpBg.From = Vector2.new(pos.X - size*0.3 - 5, pos.Y - size/2); e.hpBg.To = Vector2.new(pos.X - size*0.3 - 5, pos.Y + size/2)
                         local hp = hum.Health / hum.MaxHealth
@@ -237,7 +221,6 @@ local function StartCheat()
                 if e.box then e.box.Visible = false end; if e.name then e.name.Visible = false end; if e.dist then e.dist.Visible = false end; if e.hpBg then e.hpBg.Visible = false; e.hpFill.Visible = false end
             end
 
-            -- Аим
             if Config.Aim_Enabled and hum and hum.Health > 0 and head then
                 local sp, vis2 = Camera:WorldToViewportPoint(head.Position)
                 if vis2 then
@@ -247,9 +230,8 @@ local function StartCheat()
             end
         end
 
-        _G.CurrentTarget = closest
+        CurrentTarget = closest
 
-        -- Speed
         if Config.Speed_Enabled and LP.Character then
             local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
             local hum = LP.Character:FindFirstChild("Humanoid")
@@ -259,25 +241,17 @@ local function StartCheat()
         end
     end)
 
-    -- Silent Aim Hook
-    if hookmetamethod and getnamecallmethod then
-        local oldNamecall
-        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-            local method = getnamecallmethod()
-            if method == "Raycast" and self == Workspace then
-                if checkcaller() then return oldNamecall(self, ...) end
-                local args = {...}
-                local origin, direction = args[1], args[2]
-                if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" and direction.Magnitude > 50 then
-                    if Config.Aim_Enabled and _G.CurrentTarget then
-                        local newDir = (_G.CurrentTarget.Position - origin).Unit * direction.Magnitude
-                        return oldNamecall(self, origin, newDir, args[3])
-                    end
-                end
-            end
-            return oldNamecall(self, ...)
-        end)
-    end
+    -- Camera Lock (Мгновенный поворот при выстреле)
+    local oldCFrame = nil
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and Config.Aim_Enabled and CurrentTarget then
+            oldCFrame = Camera.CFrame
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, CurrentTarget.Position)
+            task.wait(0.05) -- Держим камеру 50 мс, чтобы пуля/стрела заспавнилась
+            if oldCFrame then Camera.CFrame = oldCFrame end
+        end
+    end)
 end
 
 KeySubmit.MouseButton1Click:Connect(function()
