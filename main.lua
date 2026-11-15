@@ -1,4 +1,4 @@
---[[ ROST ALPHA | Premium UI + Silent Aim + Full ESP (Vomagla Style) ]]
+--[[ ROST ALPHA | Vomagla Style Offset Aim + ESP ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -21,7 +21,8 @@ local Config = {
     Aim_Enabled = false, Aim_Mode = "Silent",
     TargetPart = "Head", FOV = 150, WallCheck = false, MaxDist = 3000,
     ESP_Enabled = false, ESP_Box = true, ESP_Name = true, ESP_Dist = true, ESP_HP = true, ESP_Skeleton = false,
-    Speed_Enabled = false, Speed_Value = 30, Fullbright = false
+    Speed_Enabled = false, Speed_Value = 30, Fullbright = false,
+    FOV_Offset_Y = 80 -- СМЕЩЕНИЕ КРУГА ВНИЗ (в пикселях). Можешь подкрутить в меню.
 }
 
 -- ==========================================
@@ -46,9 +47,12 @@ local function StartCheat()
     -- Меню
     local MenuGui = Instance.new("ScreenGui"); MenuGui.Name = "sg_" .. rnd(); MenuGui.ResetOnSpawn = false; MenuGui.IgnoreGuiInset = true; MenuGui.DisplayOrder = 50; MenuGui.Parent = GuiParent
     
-    -- FOV Круг (Динамический)
+    -- FOV Круг
     local FOV_Gui = Instance.new("ScreenGui"); FOV_Gui.Name = "sg_" .. rnd(); FOV_Gui.ResetOnSpawn = false; FOV_Gui.IgnoreGuiInset = true; FOV_Gui.DisplayOrder = 40; FOV_Gui.Parent = GuiParent
-    local FOV_Frame = Instance.new("Frame"); FOV_Frame.Name = "f_" .. rnd(); FOV_Frame.BackgroundTransparency = 1; FOV_Frame.AnchorPoint = Vector2.new(0.5, 0.5); FOV_Frame.Position = UDim2.new(0.5, 0, 0.5, 0); FOV_Frame.Size = UDim2.new(0, Config.FOV * 2, 0, Config.FOV * 2); FOV_Frame.Visible = false; FOV_Frame.Parent = FOV_Gui
+    local FOV_Frame = Instance.new("Frame"); FOV_Frame.Name = "f_" .. rnd(); FOV_Frame.BackgroundTransparency = 1; FOV_Frame.AnchorPoint = Vector2.new(0.5, 0.5); 
+    -- СМЕЩАЕМ КРУГ ВНИЗ (на 80 пикселей)
+    FOV_Frame.Position = UDim2.new(0.5, 0, 0.5, Config.FOV_Offset_Y); 
+    FOV_Frame.Size = UDim2.new(0, Config.FOV * 2, 0, Config.FOV * 2); FOV_Frame.Visible = false; FOV_Frame.Parent = FOV_Gui
     local FOV_Corner = Instance.new("UICorner"); FOV_Corner.CornerRadius = UDim.new(1, 0); FOV_Corner.Parent = FOV_Frame
     local FOV_Stroke = Instance.new("UIStroke"); FOV_Stroke.Color = Color3.fromRGB(255, 0, 0); FOV_Stroke.Thickness = 2; FOV_Stroke.Transparency = 0.1; FOV_Stroke.Parent = FOV_Frame
 
@@ -113,6 +117,12 @@ local function StartCheat()
                 modeBtn.MouseButton1Click:Connect(function()
                     if Config.Aim_Mode == "Silent" then Config.Aim_Mode = "Camera" else Config.Aim_Mode = "Silent" end
                     modeBtn.Text = "Mode: " .. Config.Aim_Mode
+                    -- При смене режима круг возвращается в центр или смещается
+                    if Config.Aim_Mode == "Camera" then
+                        FOV_Frame.Position = UDim2.new(0.5, 0, 0.6, 0) 
+                    else
+                        FOV_Frame.Position = UDim2.new(0.5, 0, 0.5, Config.FOV_Offset_Y) 
+                    end
                 end)
 
                 local fovFrame = Instance.new("Frame"); fovFrame.Size = UDim2.new(1, -10, 0, 45); fovFrame.Position = UDim2.new(0, 5, 0, 120); fovFrame.BackgroundColor3 = Color3.fromRGB(25, 15, 35); fovFrame.Parent = Content
@@ -137,7 +147,6 @@ local function StartCheat()
                         fovText.Text = "FOV Radius: " .. v
                         fovFill.Size = UDim2.new(p, 0, 1, 0)
                         FOV_Frame.Size = UDim2.new(0, v * 2, 0, v * 2)
-                        FOV_Frame.Position = UDim2.new(0.5, 0, 0.5, 0)
                     end
                 end)
             elseif name == "Visual" then
@@ -191,7 +200,8 @@ local function StartCheat()
 
     -- Главный цикл
     RunService.RenderStepped:Connect(function()
-        local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+        -- Смещаем центр поиска цели на 80 пикселей вниз
+        local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2 + Config.FOV_Offset_Y)
         local closest, minDist = nil, Config.FOV
 
         FOV_Frame.Visible = Config.Aim_Enabled
@@ -229,11 +239,11 @@ local function StartCheat()
                 if e.box then e.box.Visible = false end; if e.name then e.name.Visible = false end; if e.dist then e.dist.Visible = false end; if e.hpBg then e.hpBg.Visible = false; e.hpFill.Visible = false end
             end
 
+            -- Поиск цели относительно СМЕЩЕННОГО центра
             if Config.Aim_Enabled and hum and hum.Health > 0 and head then
                 local sp, vis2 = Camera:WorldToViewportPoint(head.Position)
                 if vis2 then
                     local d = (Vector2.new(sp.X, sp.Y) - center).Magnitude
-                    -- Учитываем дистанцию до 3000 метров
                     local realDist = (LP.Character.HumanoidRootPart.Position - head.Position).Magnitude
                     if d < minDist and realDist <= Config.MaxDist then 
                         minDist = d; closest = head 
@@ -248,9 +258,9 @@ local function StartCheat()
         -- Меняем цвет FOV круга
         if Config.Aim_Enabled then
             if CurrentTarget then
-                FOV_Stroke.Color = Color3.fromRGB(0, 255, 0) -- Зеленый
+                FOV_Stroke.Color = Color3.fromRGB(0, 255, 0)
             else
-                FOV_Stroke.Color = Color3.fromRGB(255, 0, 0) -- Красный
+                FOV_Stroke.Color = Color3.fromRGB(255, 0, 0)
             end
         end
 
@@ -286,7 +296,6 @@ local function StartCheat()
                 local origin, direction = args[1], args[2]
                 if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" and direction.Magnitude > 50 then
                     if Config.Aim_Enabled and Config.Aim_Mode == "Silent" and _G.CurrentTarget then
-                        -- Наводимся идеально в цель с учетом движения
                         local targetPos = _G.CurrentTarget.Position + (_G.CurrentTarget.Velocity * 0.05)
                         local newDir = (targetPos - origin).Unit * direction.Magnitude
                         return oldNamecall(self, origin, newDir, args[3])
