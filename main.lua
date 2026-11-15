@@ -1,4 +1,4 @@
---[[ ROST ALPHA | Ultimate Aim + Projectile Magnet ]]
+--[[ ROST ALPHA | Ultimate Aim + Instant Arrow Magnet + Proper WallCheck ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -22,7 +22,7 @@ local Config = {
     TargetPart = "Head", FOV = 150, WallCheck = false, MaxDist = 3000,
     ESP_Enabled = false, ESP_Box = true, ESP_Name = true, ESP_Dist = true, ESP_HP = true, ESP_Skeleton = false,
     Speed_Enabled = false, Speed_Value = 30, Fullbright = false,
-    FOV_Offset_Y = 80
+    FOV_Offset_Y = 20 -- Поднял круг выше (было 80)
 }
 
 -- ==========================================
@@ -196,6 +196,17 @@ local function StartCheat()
     local OldLighting = {Ambient = Lighting.Ambient, OutdoorAmbient = Lighting.OutdoorAmbient, Brightness = Lighting.Brightness}
     local CurrentTarget = nil
 
+    -- Функция проверки видимости (WallCheck)
+    local function isVisible(targetPart, targetChar)
+        local rayParams = RaycastParams.new()
+        rayParams.FilterDescendantsInstances = {LP.Character, targetChar}
+        rayParams.FilterType = Enum.RaycastFilterType.Exclude
+        local rayOrigin = Camera.CFrame.Position
+        local rayDirection = targetPart.Position - rayOrigin
+        local result = Workspace:Raycast(rayOrigin, rayDirection, rayParams)
+        return not result -- Если луч не встретил стену, значит цель видна
+    end
+
     -- Главный цикл
     RunService.RenderStepped:Connect(function()
         local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2 + Config.FOV_Offset_Y)
@@ -241,8 +252,17 @@ local function StartCheat()
                 if vis2 then
                     local d = (Vector2.new(sp.X, sp.Y) - center).Magnitude
                     local realDist = (LP.Character.HumanoidRootPart.Position - head.Position).Magnitude
+                    
                     if d < minDist and realDist <= Config.MaxDist then 
-                        minDist = d; closest = head 
+                        if Config.WallCheck then
+                            -- Если WallCheck включен, проверяем видимость. Если видно - берем в таргет.
+                            if isVisible(head, ch) then
+                                minDist = d; closest = head 
+                            end
+                        else
+                            -- Если выключен, берем любого в круге
+                            minDist = d; closest = head 
+                        end
                     end
                 end
             end
@@ -253,9 +273,9 @@ local function StartCheat()
 
         if Config.Aim_Enabled then
             if CurrentTarget then
-                FOV_Stroke.Color = Color3.fromRGB(0, 255, 0)
+                FOV_Stroke.Color = Color3.fromRGB(0, 255, 0) -- Зеленый если есть цель
             else
-                FOV_Stroke.Color = Color3.fromRGB(255, 0, 0)
+                FOV_Stroke.Color = Color3.fromRGB(255, 0, 0) -- Красный если пусто
             end
         end
 
@@ -301,25 +321,25 @@ local function StartCheat()
         end)
     end
 
-    -- ==========================================
-    -- ПЕРЕХВАТ СТРЕЛ (PROJECTILE MAGNET)
-    -- ==========================================
+    -- ПЕРЕХВАТ СТРЕЛ (Мгновенный)
     local BulletsFolder = Workspace:WaitForChild("Bullets", 10)
-    
     if BulletsFolder then
         BulletsFolder.DescendantAdded:Connect(function(obj)
             if Config.Aim_Enabled and Config.Aim_Mode == "Silent" and _G.CurrentTarget then
                 if obj.Name == "Arrow" or obj.Name:find("Bullet") or obj.Name == "Projectile" then
-                    task.wait(0.01) 
+                    
+                    -- Мгновенная телепортация без task.wait
                     if _G.CurrentTarget and _G.CurrentTarget.Parent then
                         local targetPos = _G.CurrentTarget.Position
+                        
                         if obj:IsA("BasePart") then
                             obj.CFrame = CFrame.new(targetPos)
+                            obj.AssemblyLinearVelocity = Vector3.new(0, 0, 0) -- Останавливаем физику
                         else
                             local primary = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
                             if primary then
                                 obj:SetPrimaryPartCFrame(CFrame.new(targetPos))
-                                primary.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                                primary.AssemblyLinearVelocity = Vector3.new(0, 0, 0) -- Останавливаем физику
                             end
                         end
                     end
