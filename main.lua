@@ -1,4 +1,4 @@
---[[ ROST ALPHA | Premium UI + Full ESP + Camera Lock Aim ]]
+--[[ ROST ALPHA | Premium UI + Silent Aim + Camera Lock + Full ESP ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -18,7 +18,8 @@ local KEY_DATABASE = {
 local UserRole = "free"
 
 local Config = {
-    Aim_Enabled = false, TargetPart = "Head", FOV = 150, WallCheck = false,
+    Aim_Enabled = false, Aim_Mode = "Silent", -- "Silent" или "Camera"
+    TargetPart = "Head", FOV = 150, WallCheck = false,
     ESP_Enabled = false, ESP_Box = true, ESP_Name = true, ESP_Dist = true, ESP_HP = true, ESP_Skeleton = false,
     Speed_Enabled = false, Speed_Value = 30, Fullbright = false
 }
@@ -103,11 +104,20 @@ local function StartCheat()
                     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
                     b.MouseButton1Click:Connect(function() Config[key] = not Config[key]; b.Text = tName .. ": " .. (Config[key] and "ON" or "OFF") end)
                 end
-                AddToggle("Camera Lock (All Weapons)", "Aim_Enabled", 5)
+                AddToggle("Aim (Master)", "Aim_Enabled", 5)
                 AddToggle("Wall Check", "WallCheck", 40)
                 
+                -- Переключатель режима (Silent / Camera)
+                local modeBtn = Instance.new("TextButton"); modeBtn.Size = UDim2.new(1, -10, 0, 30); modeBtn.Position = UDim2.new(0, 5, 0, 80); modeBtn.BackgroundColor3 = Color3.fromRGB(50, 30, 70); modeBtn.Text = "Mode: " .. Config.Aim_Mode; modeBtn.TextColor3 = Color3.new(1,1,1); modeBtn.Font = Enum.Font.GothamBold; modeBtn.TextSize = 13; modeBtn.Parent = Content
+                modeBtn.ZIndex = 9
+                Instance.new("UICorner", modeBtn).CornerRadius = UDim.new(0, 4)
+                modeBtn.MouseButton1Click:Connect(function()
+                    if Config.Aim_Mode == "Silent" then Config.Aim_Mode = "Camera" else Config.Aim_Mode = "Silent" end
+                    modeBtn.Text = "Mode: " .. Config.Aim_Mode
+                end)
+
                 -- FOV Slider
-                local fovFrame = Instance.new("Frame"); fovFrame.Size = UDim2.new(1, -10, 0, 45); fovFrame.Position = UDim2.new(0, 5, 0, 80); fovFrame.BackgroundColor3 = Color3.fromRGB(25, 15, 35); fovFrame.Parent = Content
+                local fovFrame = Instance.new("Frame"); fovFrame.Size = UDim2.new(1, -10, 0, 45); fovFrame.Position = UDim2.new(0, 5, 0, 120); fovFrame.BackgroundColor3 = Color3.fromRGB(25, 15, 35); fovFrame.Parent = Content
                 fovFrame.ZIndex = 9
                 Instance.new("UICorner", fovFrame).CornerRadius = UDim.new(0, 4)
                 local fovText = Instance.new("TextLabel"); fovText.Size = UDim2.new(1, -20, 0, 15); fovText.Position = UDim2.new(0, 10, 0, 5); fovText.BackgroundTransparency = 1; fovText.Text = "FOV Radius: " .. Config.FOV; fovText.TextColor3 = Color3.new(1,1,1); fovText.Font = Enum.Font.Gotham; fovText.TextSize = 12; fovText.TextXAlignment = Enum.TextXAlignment.Left; fovText.Parent = fovFrame
@@ -181,7 +191,7 @@ local function StartCheat()
     local OldLighting = {Ambient = Lighting.Ambient, OutdoorAmbient = Lighting.OutdoorAmbient, Brightness = Lighting.Brightness}
     local CurrentTarget = nil
 
-    -- Логика аима (Camera Lock)
+    -- Главный цикл (ESP + FOV)
     RunService.RenderStepped:Connect(function()
         local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
         local closest, minDist = nil, Config.FOV
@@ -231,6 +241,7 @@ local function StartCheat()
         end
 
         CurrentTarget = closest
+        _G.CurrentTarget = closest
 
         if Config.Speed_Enabled and LP.Character then
             local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
@@ -241,17 +252,37 @@ local function StartCheat()
         end
     end)
 
-    -- Camera Lock (Мгновенный поворот при выстреле)
+    -- Camera Lock (Для луков)
     local oldCFrame = nil
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
-        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and Config.Aim_Enabled and CurrentTarget then
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and Config.Aim_Enabled and Config.Aim_Mode == "Camera" and CurrentTarget then
             oldCFrame = Camera.CFrame
             Camera.CFrame = CFrame.new(Camera.CFrame.Position, CurrentTarget.Position)
-            task.wait(0.05) -- Держим камеру 50 мс, чтобы пуля/стрела заспавнилась
+            task.wait(0.05)
             if oldCFrame then Camera.CFrame = oldCFrame end
         end
     end)
+
+    -- Silent Aim Hook (Для пуль)
+    if hookmetamethod and getnamecallmethod then
+        local oldNamecall
+        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+            local method = getnamecallmethod()
+            if method == "Raycast" and self == Workspace then
+                if checkcaller() then return oldNamecall(self, ...) end
+                local args = {...}
+                local origin, direction = args[1], args[2]
+                if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" and direction.Magnitude > 50 then
+                    if Config.Aim_Enabled and Config.Aim_Mode == "Silent" and _G.CurrentTarget then
+                        local newDir = (_G.CurrentTarget.Position - origin).Unit * direction.Magnitude
+                        return oldNamecall(self, origin, newDir, args[3])
+                    end
+                end
+            end
+            return oldNamecall(self, ...)
+        end)
+    end
 end
 
 KeySubmit.MouseButton1Click:Connect(function()
