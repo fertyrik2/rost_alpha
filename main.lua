@@ -1,4 +1,4 @@
---[[ ROST ALPHA | Full Access (Free) ]]
+--[[ ROST ALPHA | Premium UI + Silent Aim + Full ESP (Vomagla Style) ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -19,7 +19,7 @@ local UserRole = "free"
 
 local Config = {
     Aim_Enabled = false, Aim_Mode = "Silent",
-    TargetPart = "Head", FOV = 150, WallCheck = false,
+    TargetPart = "Head", FOV = 150, WallCheck = false, MaxDist = 3000,
     ESP_Enabled = false, ESP_Box = true, ESP_Name = true, ESP_Dist = true, ESP_HP = true, ESP_Skeleton = false,
     Speed_Enabled = false, Speed_Value = 30, Fullbright = false
 }
@@ -46,11 +46,11 @@ local function StartCheat()
     -- Меню
     local MenuGui = Instance.new("ScreenGui"); MenuGui.Name = "sg_" .. rnd(); MenuGui.ResetOnSpawn = false; MenuGui.IgnoreGuiInset = true; MenuGui.DisplayOrder = 50; MenuGui.Parent = GuiParent
     
-    -- FOV Круг
+    -- FOV Круг (Динамический)
     local FOV_Gui = Instance.new("ScreenGui"); FOV_Gui.Name = "sg_" .. rnd(); FOV_Gui.ResetOnSpawn = false; FOV_Gui.IgnoreGuiInset = true; FOV_Gui.DisplayOrder = 40; FOV_Gui.Parent = GuiParent
     local FOV_Frame = Instance.new("Frame"); FOV_Frame.Name = "f_" .. rnd(); FOV_Frame.BackgroundTransparency = 1; FOV_Frame.AnchorPoint = Vector2.new(0.5, 0.5); FOV_Frame.Position = UDim2.new(0.5, 0, 0.5, 0); FOV_Frame.Size = UDim2.new(0, Config.FOV * 2, 0, Config.FOV * 2); FOV_Frame.Visible = false; FOV_Frame.Parent = FOV_Gui
     local FOV_Corner = Instance.new("UICorner"); FOV_Corner.CornerRadius = UDim.new(1, 0); FOV_Corner.Parent = FOV_Frame
-    local FOV_Stroke = Instance.new("UIStroke"); FOV_Stroke.Color = Color3.fromRGB(150, 80, 255); FOV_Stroke.Thickness = 1.5; FOV_Stroke.Transparency = 0.3; FOV_Stroke.Parent = FOV_Frame
+    local FOV_Stroke = Instance.new("UIStroke"); FOV_Stroke.Color = Color3.fromRGB(255, 0, 0); FOV_Stroke.Thickness = 2; FOV_Stroke.Transparency = 0.1; FOV_Stroke.Parent = FOV_Frame
 
     -- Кнопка "F"
     local ToggleBtn = Instance.new("TextButton"); ToggleBtn.Size = UDim2.new(0, 50, 0, 50); ToggleBtn.Position = UDim2.new(0.5, -25, 0.5, -25); ToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 80, 255); ToggleBtn.Text = "F"; ToggleBtn.TextColor3 = Color3.new(1,1,1); ToggleBtn.Font = Enum.Font.GothamBold; ToggleBtn.TextSize = 20; ToggleBtn.Parent = MenuGui
@@ -233,13 +233,26 @@ local function StartCheat()
                 local sp, vis2 = Camera:WorldToViewportPoint(head.Position)
                 if vis2 then
                     local d = (Vector2.new(sp.X, sp.Y) - center).Magnitude
-                    if d < minDist then minDist = d; closest = head end
+                    -- Учитываем дистанцию до 3000 метров
+                    local realDist = (LP.Character.HumanoidRootPart.Position - head.Position).Magnitude
+                    if d < minDist and realDist <= Config.MaxDist then 
+                        minDist = d; closest = head 
+                    end
                 end
             end
         end
 
         CurrentTarget = closest
         _G.CurrentTarget = closest
+
+        -- Меняем цвет FOV круга
+        if Config.Aim_Enabled then
+            if CurrentTarget then
+                FOV_Stroke.Color = Color3.fromRGB(0, 255, 0) -- Зеленый
+            else
+                FOV_Stroke.Color = Color3.fromRGB(255, 0, 0) -- Красный
+            end
+        end
 
         if Config.Speed_Enabled and LP.Character then
             local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
@@ -262,7 +275,7 @@ local function StartCheat()
         end
     end)
 
-    -- Silent Aim Hook
+    -- Silent Aim Hook (Идеальное попадание)
     if hookmetamethod and getnamecallmethod then
         local oldNamecall
         oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
@@ -273,7 +286,9 @@ local function StartCheat()
                 local origin, direction = args[1], args[2]
                 if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" and direction.Magnitude > 50 then
                     if Config.Aim_Enabled and Config.Aim_Mode == "Silent" and _G.CurrentTarget then
-                        local newDir = (_G.CurrentTarget.Position - origin).Unit * direction.Magnitude
+                        -- Наводимся идеально в цель с учетом движения
+                        local targetPos = _G.CurrentTarget.Position + (_G.CurrentTarget.Velocity * 0.05)
+                        local newDir = (targetPos - origin).Unit * direction.Magnitude
                         return oldNamecall(self, origin, newDir, args[3])
                     end
                 end
