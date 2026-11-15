@@ -1,4 +1,4 @@
---[[ ROST ALPHA | Premium UI + Full ESP + Silent Aim (ZIndex Fix) ]]
+--[[ ROST ALPHA | Premium UI + Full ESP + Silent Aim + FOV + Fullbright ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -45,6 +45,12 @@ local function StartCheat()
     -- Меню
     local MenuGui = Instance.new("ScreenGui"); MenuGui.Name = "sg_" .. rnd(); MenuGui.ResetOnSpawn = false; MenuGui.IgnoreGuiInset = true; MenuGui.DisplayOrder = 50; MenuGui.Parent = GuiParent
     
+    -- FOV Круг
+    local FOV_Gui = Instance.new("ScreenGui"); FOV_Gui.Name = "sg_" .. rnd(); FOV_Gui.ResetOnSpawn = false; FOV_Gui.IgnoreGuiInset = true; FOV_Gui.DisplayOrder = 40; FOV_Gui.Parent = GuiParent
+    local FOV_Frame = Instance.new("Frame"); FOV_Frame.Name = "f_" .. rnd(); FOV_Frame.BackgroundTransparency = 1; FOV_Frame.AnchorPoint = Vector2.new(0.5, 0.5); FOV_Frame.Position = UDim2.new(0.5, 0, 0.5, 0); FOV_Frame.Size = UDim2.new(0, Config.FOV * 2, 0, Config.FOV * 2); FOV_Frame.Visible = false; FOV_Frame.Parent = FOV_Gui
+    local FOV_Corner = Instance.new("UICorner"); FOV_Corner.CornerRadius = UDim.new(1, 0); FOV_Corner.Parent = FOV_Frame
+    local FOV_Stroke = Instance.new("UIStroke"); FOV_Stroke.Color = Color3.fromRGB(150, 80, 255); FOV_Stroke.Thickness = 1.5; FOV_Stroke.Transparency = 0.3; FOV_Stroke.Parent = FOV_Frame
+
     -- Кнопка "F"
     local ToggleBtn = Instance.new("TextButton"); ToggleBtn.Size = UDim2.new(0, 50, 0, 50); ToggleBtn.Position = UDim2.new(0.5, -25, 0.5, -25); ToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 80, 255); ToggleBtn.Text = "F"; ToggleBtn.TextColor3 = Color3.new(1,1,1); ToggleBtn.Font = Enum.Font.GothamBold; ToggleBtn.TextSize = 20; ToggleBtn.Parent = MenuGui
     Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
@@ -122,6 +128,8 @@ local function StartCheat()
                         Config.FOV = v
                         fovText.Text = "FOV Radius: " .. v
                         fovFill.Size = UDim2.new(p, 0, 1, 0)
+                        FOV_Frame.Size = UDim2.new(0, v * 2, 0, v * 2)
+                        FOV_Frame.Position = UDim2.new(0.5, 0, 0.5, 0)
                     end
                 end)
             elseif name == "Visual" then
@@ -137,6 +145,7 @@ local function StartCheat()
                 AddToggle("Distance", "ESP_Dist", 110)
                 AddToggle("Health Bar", "ESP_HP", 145)
                 AddToggle("Skeleton", "ESP_Skeleton", 180)
+                AddToggle("Fullbright", "Fullbright", 215)
             elseif name == "Player" then
                 local function AddToggle(tName, key, pos)
                     local b = Instance.new("TextButton"); b.Size = UDim2.new(1, -10, 0, 30); b.Position = UDim2.new(0, 5, 0, pos); b.BackgroundColor3 = Color3.fromRGB(25, 15, 35); b.Text = tName .. ": " .. (Config[key] and "ON" or "OFF"); b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.Gotham; b.TextSize = 13; b.Parent = Content
@@ -145,7 +154,6 @@ local function StartCheat()
                     b.MouseButton1Click:Connect(function() Config[key] = not Config[key]; b.Text = tName .. ": " .. (Config[key] and "ON" or "OFF") end)
                 end
                 AddToggle("Speed", "Speed_Enabled", 5)
-                AddToggle("Fullbright", "Fullbright", 40)
             end
         end)
     end
@@ -170,10 +178,27 @@ local function StartCheat()
     for _, p in ipairs(Players:GetPlayers()) do CreateESP(p) end
     Players.PlayerAdded:Connect(function(p) CreateESP(p) end)
 
+    -- Сохранение старых настроек освещения
+    local OldLighting = {Ambient = Lighting.Ambient, OutdoorAmbient = Lighting.OutdoorAmbient, Brightness = Lighting.Brightness}
+
     -- Главный цикл
     RunService.RenderStepped:Connect(function()
         local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
         local closest, minDist = nil, Config.FOV
+
+        -- FOV Круг
+        FOV_Frame.Visible = Config.Aim_Enabled
+
+        -- Fullbright
+        if Config.Fullbright then
+            Lighting.Ambient = Color3.fromRGB(255, 255, 255)
+            Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255)
+            Lighting.Brightness = 2
+        else
+            Lighting.Ambient = OldLighting.Ambient
+            Lighting.OutdoorAmbient = OldLighting.OutdoorAmbient
+            Lighting.Brightness = OldLighting.Brightness
+        end
 
         for plr, e in pairs(ESP) do
             local ch = plr.Character
