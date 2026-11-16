@@ -1,9 +1,10 @@
---[[ ROST ALPHA | Ultimate Aim + Instant Arrow Magnet + Proper WallCheck ]]
+--[[ ROST ALPHA | Premium UI + No Deco + Aim + ESP ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
 local LP = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
@@ -21,8 +22,8 @@ local Config = {
     Aim_Enabled = false, Aim_Mode = "Silent",
     TargetPart = "Head", FOV = 150, WallCheck = false, MaxDist = 3000,
     ESP_Enabled = false, ESP_Box = true, ESP_Name = true, ESP_Dist = true, ESP_HP = true, ESP_Skeleton = false,
-    Speed_Enabled = false, Speed_Value = 30, Fullbright = false,
-    FOV_Offset_Y = 20 -- Поднял круг выше (было 80)
+    Speed_Enabled = false, Speed_Value = 30, Fullbright = false, NoDeco = false,
+    FOV_Offset_Y = 20
 }
 
 -- ==========================================
@@ -43,6 +44,11 @@ local function StartCheat()
     for _, p in ipairs(Players:GetPlayers()) do if p ~= LP then playerCache[p] = true end end
     Players.PlayerAdded:Connect(function(p) playerCache[p] = true end)
     Players.PlayerRemoving:Connect(function(p) playerCache[p] = nil end)
+
+    -- Размытие (Blur)
+    local Blur = Instance.new("BlurEffect")
+    Blur.Size = 0
+    Blur.Parent = Lighting
 
     -- Меню
     local MenuGui = Instance.new("ScreenGui"); MenuGui.Name = "sg_" .. rnd(); MenuGui.ResetOnSpawn = false; MenuGui.IgnoreGuiInset = true; MenuGui.DisplayOrder = 50; MenuGui.Parent = GuiParent
@@ -81,7 +87,15 @@ local function StartCheat()
     local MainFrame = Instance.new("Frame"); MainFrame.Size = UDim2.new(0, 380, 0, 280); MainFrame.Position = UDim2.new(0.5, -190, 0.5, -140); MainFrame.BackgroundColor3 = Color3.fromRGB(18, 12, 24); MainFrame.Visible = false; MainFrame.Parent = MenuGui
     MainFrame.ZIndex = 5
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
-    ToggleBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
+    
+    ToggleBtn.MouseButton1Click:Connect(function()
+        MainFrame.Visible = not MainFrame.Visible
+        if MainFrame.Visible then
+            TweenService:Create(Blur, TweenInfo.new(0.3), {Size = 15}):Play()
+        else
+            TweenService:Create(Blur, TweenInfo.new(0.3), {Size = 0}):Play()
+        end
+    end)
 
     local Sidebar = Instance.new("Frame"); Sidebar.Size = UDim2.new(0, 100, 1, 0); Sidebar.BackgroundColor3 = Color3.fromRGB(12, 8, 18); Sidebar.Parent = MainFrame
     Sidebar.ZIndex = 6
@@ -161,6 +175,7 @@ local function StartCheat()
                 AddToggle("Health Bar", "ESP_HP", 145)
                 AddToggle("Skeleton", "ESP_Skeleton", 180)
                 AddToggle("Fullbright", "Fullbright", 215)
+                AddToggle("No Deco", "NoDeco", 250)
             elseif name == "Player" then
                 local function AddToggle(tName, key, pos)
                     local b = Instance.new("TextButton"); b.Size = UDim2.new(1, -10, 0, 30); b.Position = UDim2.new(0, 5, 0, pos); b.BackgroundColor3 = Color3.fromRGB(25, 15, 35); b.Text = tName .. ": " .. (Config[key] and "ON" or "OFF"); b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.Gotham; b.TextSize = 13; b.Parent = Content
@@ -174,6 +189,35 @@ local function StartCheat()
     end
     CreateTab("Combat", "🎯"); CreateTab("Visual", "👁️"); CreateTab("Player", "🏃")
     Tabs[1].btn.TextColor3 = Color3.fromRGB(150, 80, 255)
+
+    -- Снежинки
+    local SnowContainer = Instance.new("Frame")
+    SnowContainer.Size = UDim2.new(1, 0, 1, 0)
+    SnowContainer.BackgroundTransparency = 1
+    SnowContainer.Parent = MenuGui
+    SnowContainer.ZIndex = 1
+    SnowContainer.ClipsDescendants = true
+
+    local Snowflakes = {}
+    for i = 1, 50 do
+        local sf = Instance.new("Frame")
+        sf.Size = UDim2.new(0, math.random(2, 5), 0, math.random(2, 5))
+        sf.BackgroundColor3 = Color3.new(1,1,1)
+        sf.BackgroundTransparency = math.random(0, 50) / 100
+        sf.Position = UDim2.new(math.random(), 0, math.random(), 0)
+        sf.Parent = SnowContainer
+        Instance.new("UICorner", sf).CornerRadius = UDim.new(1, 0)
+        table.insert(Snowflakes, {frame = sf, speed = math.random(10, 30) / 100})
+    end
+
+    RunService.RenderStepped:Connect(function(dt)
+        if not SnowContainer.Visible then return end
+        for _, sf in ipairs(Snowflakes) do
+            local newY = sf.frame.Position.Y.Scale + (sf.speed * dt)
+            if newY > 1 then newY = -0.05; sf.frame.Position = UDim2.new(math.random(), 0, newY, 0) 
+            else sf.frame.Position = UDim2.new(sf.frame.Position.X.Scale, 0, newY, 0) end
+        end
+    end)
 
     -- ESP
     local ESP = {}
@@ -196,7 +240,6 @@ local function StartCheat()
     local OldLighting = {Ambient = Lighting.Ambient, OutdoorAmbient = Lighting.OutdoorAmbient, Brightness = Lighting.Brightness}
     local CurrentTarget = nil
 
-    -- Функция проверки видимости (WallCheck)
     local function isVisible(targetPart, targetChar)
         local rayParams = RaycastParams.new()
         rayParams.FilterDescendantsInstances = {LP.Character, targetChar}
@@ -204,15 +247,22 @@ local function StartCheat()
         local rayOrigin = Camera.CFrame.Position
         local rayDirection = targetPart.Position - rayOrigin
         local result = Workspace:Raycast(rayOrigin, rayDirection, rayParams)
-        return not result -- Если луч не встретил стену, значит цель видна
+        return not result
     end
 
-    -- Главный цикл
     RunService.RenderStepped:Connect(function()
         local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2 + Config.FOV_Offset_Y)
         local closest, minDist = nil, Config.FOV
 
         FOV_Frame.Visible = Config.Aim_Enabled
+
+        -- No Deco (Убирает траву и мусор)
+        if Config.NoDeco then
+            local terrain = Workspace:FindFirstChildOfClass("Terrain")
+            if terrain then
+                pcall(function() sethiddenproperty(terrain, "Decoration", false) end)
+            end
+        end
 
         if Config.Fullbright then
             Lighting.Ambient = Color3.fromRGB(255, 255, 255); Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255); Lighting.Brightness = 2
@@ -252,15 +302,12 @@ local function StartCheat()
                 if vis2 then
                     local d = (Vector2.new(sp.X, sp.Y) - center).Magnitude
                     local realDist = (LP.Character.HumanoidRootPart.Position - head.Position).Magnitude
-                    
                     if d < minDist and realDist <= Config.MaxDist then 
                         if Config.WallCheck then
-                            -- Если WallCheck включен, проверяем видимость. Если видно - берем в таргет.
                             if isVisible(head, ch) then
                                 minDist = d; closest = head 
                             end
                         else
-                            -- Если выключен, берем любого в круге
                             minDist = d; closest = head 
                         end
                     end
@@ -273,9 +320,9 @@ local function StartCheat()
 
         if Config.Aim_Enabled then
             if CurrentTarget then
-                FOV_Stroke.Color = Color3.fromRGB(0, 255, 0) -- Зеленый если есть цель
+                FOV_Stroke.Color = Color3.fromRGB(0, 255, 0)
             else
-                FOV_Stroke.Color = Color3.fromRGB(255, 0, 0) -- Красный если пусто
+                FOV_Stroke.Color = Color3.fromRGB(255, 0, 0)
             end
         end
 
@@ -318,33 +365,6 @@ local function StartCheat()
                 end
             end
             return oldNamecall(self, ...)
-        end)
-    end
-
-    -- ПЕРЕХВАТ СТРЕЛ (Мгновенный)
-    local BulletsFolder = Workspace:WaitForChild("Bullets", 10)
-    if BulletsFolder then
-        BulletsFolder.DescendantAdded:Connect(function(obj)
-            if Config.Aim_Enabled and Config.Aim_Mode == "Silent" and _G.CurrentTarget then
-                if obj.Name == "Arrow" or obj.Name:find("Bullet") or obj.Name == "Projectile" then
-                    
-                    -- Мгновенная телепортация без task.wait
-                    if _G.CurrentTarget and _G.CurrentTarget.Parent then
-                        local targetPos = _G.CurrentTarget.Position
-                        
-                        if obj:IsA("BasePart") then
-                            obj.CFrame = CFrame.new(targetPos)
-                            obj.AssemblyLinearVelocity = Vector3.new(0, 0, 0) -- Останавливаем физику
-                        else
-                            local primary = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
-                            if primary then
-                                obj:SetPrimaryPartCFrame(CFrame.new(targetPos))
-                                primary.AssemblyLinearVelocity = Vector3.new(0, 0, 0) -- Останавливаем физику
-                            end
-                        end
-                    end
-                end
-            end
         end)
     end
 end
