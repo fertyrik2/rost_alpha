@@ -1,4 +1,4 @@
---[[ ROST ALPHA | Vomagla Style Aim + No Deco + ESP ]]
+--[[ ROST ALPHA | Premium UI + No Deco + Aim + ESP (Fixed Gun Hook) ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -41,7 +41,6 @@ local KeySubmit = Instance.new("TextButton"); KeySubmit.Size = UDim2.new(1, -20,
 -- ОСНОВНОЙ ФУНКЦИОНАЛ
 -- ==========================================
 local function StartCheat()
-    -- Переменная для текущей цели
     _G.CurrentTarget = nil
     
     local playerCache = {}
@@ -243,7 +242,6 @@ local function StartCheat()
 
     local OldLighting = {Ambient = Lighting.Ambient, OutdoorAmbient = Lighting.OutdoorAmbient, Brightness = Lighting.Brightness}
     
-    -- Функция проверки видимости (WallCheck)
     local function isVisible(targetPart, targetChar)
         local rayParams = RaycastParams.new()
         rayParams.FilterDescendantsInstances = {LP.Character, targetChar}
@@ -260,13 +258,11 @@ local function StartCheat()
 
         FOV_Frame.Visible = Config.Aim_Enabled
 
-        -- No Deco
         if Config.NoDeco then
             local terrain = Workspace:FindFirstChildOfClass("Terrain")
             if terrain then pcall(function() sethiddenproperty(terrain, "Decoration", false) end) end
         end
 
-        -- Fullbright
         if Config.Fullbright then
             Lighting.Ambient = Color3.fromRGB(255, 255, 255); Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255); Lighting.Brightness = 2
         else
@@ -350,36 +346,32 @@ local function StartCheat()
     end)
 
     -- ==========================================
-    -- VOMAGLA STYLE SILENT AIM (Hook Fire)
+    -- ROBUST SILENT AIM (Hook Remotes)
     -- ==========================================
     pcall(function()
-        local GunBase = require(ReplicatedStorage.Gun.Scripts.GunBase)
-        local oldFire = GunBase.fire
-        
-        GunBase.fire = function(self, ...)
-            local args = {...}
-            
-            -- Если аим включен и есть цель, подменяем координаты выстрела
-            if Config.Aim_Enabled and Config.Aim_Mode == "Silent" and _G.CurrentTarget then
-                local targetPos = _G.CurrentTarget.Position
-                
-                -- Ищем Vector3 в аргументах и меняем его
-                for i, v in ipairs(args) do
-                    if typeof(v) == "Vector3" then
-                        args[i] = targetPos
-                    elseif typeof(v) == "buffer" then
-                        -- Если аргумент - буфер, вписываем координаты в него (Roblox часто шлет Vector3 в буферах)
-                        pcall(function()
-                            buffer.writef32(v, 4,  targetPos.X)
-                            buffer.writef32(v, 8,  targetPos.Y)
-                            buffer.writef32(v, 12, targetPos.Z)
-                        end)
+        -- Ищем все RemoteEvents в ReplicatedStorage, которые отвечают за выстрелы
+        for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
+            if obj:IsA("RemoteEvent") and (obj.Name:lower():find("fire") or obj.Name:lower():find("shoot") or obj.Name:lower():find("hit")) then
+                local oldFireServer = obj.FireServer
+                obj.FireServer = function(self, ...)
+                    local args = {...}
+                    if Config.Aim_Enabled and Config.Aim_Mode == "Silent" and _G.CurrentTarget then
+                        local targetPos = _G.CurrentTarget.Position
+                        for i, v in ipairs(args) do
+                            if typeof(v) == "Vector3" then
+                                args[i] = targetPos
+                            elseif typeof(v) == "buffer" then
+                                pcall(function()
+                                    buffer.writef32(v, 4, targetPos.X)
+                                    buffer.writef32(v, 8, targetPos.Y)
+                                    buffer.writef32(v, 12, targetPos.Z)
+                                end)
+                            end
+                        end
                     end
+                    return oldFireServer(self, table.unpack(args))
                 end
-                return oldFire(self, table.unpack(args))
             end
-            
-            return oldFire(self, ...)
         end
     end)
 end
