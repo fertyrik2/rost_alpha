@@ -1,4 +1,4 @@
---[[ ROST ALPHA | Vomagla Style (Target Switch + Silent Aim) ]]
+--[[ ROST ALPHA | Vomagla Style (Fixed WallCheck) ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -20,7 +20,7 @@ local UserRole = "free"
 
 local Config = {
     Aim_Enabled = false, 
-    TargetPart = "Head", -- По умолчанию голова, можно переключить на Torso
+    TargetPart = "Head", 
     FOV = 150, WallCheck = false, MaxDist = 3000,
     ESP_Enabled = false, ESP_Box = true, ESP_Name = true, ESP_Dist = true, ESP_HP = true, ESP_Skeleton = false,
     Speed_Enabled = false, Speed_Value = 30, Fullbright = false, NoDeco = false,
@@ -120,7 +120,6 @@ local function StartCheat()
                 AddToggle("Silent Aim", "Aim_Enabled", 5)
                 AddToggle("Wall Check", "WallCheck", 40)
                 
-                -- Кнопка выбора цели (Head / Torso)
                 local targetBtn = Instance.new("TextButton"); targetBtn.Size = UDim2.new(1, -10, 0, 30); targetBtn.Position = UDim2.new(0, 5, 0, 80); targetBtn.BackgroundColor3 = Color3.fromRGB(50, 30, 70); targetBtn.Text = "Target: " .. Config.TargetPart; targetBtn.TextColor3 = Color3.new(1,1,1); targetBtn.Font = Enum.Font.GothamBold; targetBtn.TextSize = 13; targetBtn.Parent = Content
                 targetBtn.ZIndex = 9
                 Instance.new("UICorner", targetBtn).CornerRadius = UDim.new(0, 4)
@@ -229,14 +228,31 @@ local function StartCheat()
 
     local OldLighting = {Ambient = Lighting.Ambient, OutdoorAmbient = Lighting.OutdoorAmbient, Brightness = Lighting.Brightness}
     
+    -- УЛУЧШЕННЫЙ WALLCHECK
     local function isVisible(targetPart, targetChar)
         local rayParams = RaycastParams.new()
         rayParams.FilterDescendantsInstances = {LP.Character, targetChar}
         rayParams.FilterType = Enum.RaycastFilterType.Exclude
-        local rayOrigin = Camera.CFrame.Position
-        local rayDirection = targetPart.Position - rayOrigin
-        local result = Workspace:Raycast(rayOrigin, rayDirection, rayParams)
-        return not result
+        rayParams.IgnoreWater = true
+        
+        -- Стреляем из головы персонажа, а не из камеры
+        local rayOrigin = LP.Character and LP.Character:FindFirstChild("Head") and LP.Character.Head.Position or Camera.CFrame.Position
+        
+        -- Проверяем не одну точку, а 3 точки (голова, торс, ноги)
+        local points = {
+            targetChar:FindFirstChild("Head") and targetChar.Head.Position,
+            targetChar:FindFirstChild("HumanoidRootPart") and targetChar.HumanoidRootPart.Position,
+            targetChar:FindFirstChild("UpperTorso") and targetChar.UpperTorso.Position or targetChar:FindFirstChild("Torso") and targetChar.Torso.Position
+        }
+        
+        for _, point in ipairs(points) do
+            if point then
+                local rayDirection = point - rayOrigin
+                local result = Workspace:Raycast(rayOrigin, rayDirection, rayParams)
+                if not result then return true end -- Если хотя бы одна точка видна, цель видима
+            end
+        end
+        return false
     end
 
     RunService.RenderStepped:Connect(function()
@@ -324,7 +340,7 @@ local function StartCheat()
     end)
 
     -- ==========================================
-    -- RAYCAST HOOK (Бьем в выбранную часть)
+    -- RAYCAST HOOK
     -- ==========================================
     if hookmetamethod and getnamecallmethod then
         local oldNamecall
@@ -336,7 +352,6 @@ local function StartCheat()
                 local origin, direction = args[1], args[2]
                 if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" and direction.Magnitude > 50 then
                     if Config.Aim_Enabled and _G.CurrentTarget then
-                        -- Бьем туда, что выбрано в меню (Head или HumanoidRootPart)
                         local targetPos = _G.CurrentTarget.Position + (_G.CurrentTarget.Velocity * 0.05)
                         local newDir = (targetPos - origin).Unit * direction.Magnitude
                         return oldNamecall(self, origin, newDir, args[3])
