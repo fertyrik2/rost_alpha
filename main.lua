@@ -1,4 +1,4 @@
---[[ ROST ALPHA | Premium UI + Fixes + Misc (Inf Jump + Vomagla Speed) ]]
+--[[ ROST ALPHA | Premium UI + Aim + ESP + Inf Jump (No Speed) ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -21,7 +21,7 @@ local UserRole = "free"
 local Config = {
     Aim_Enabled = false, TargetPart = "Head", FOV = 150, WallCheck = false, MaxDist = 3000,
     ESP_Enabled = false, ESP_Box = true, ESP_Name = true, ESP_Dist = true, ESP_HP = true, ESP_Skeleton = false,
-    Speed_Enabled = false, Speed_Value = 30, Fullbright = false, NoDeco = false,
+    Fullbright = false, NoDeco = false,
     SnowEnabled = true, InfJump = false,
     FOV_Offset_Y = 20
 }
@@ -96,7 +96,6 @@ local function StartCheat()
     Sidebar.ZIndex = 6
     Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 8)
     
-    -- Скроллинг контента
     local Content = Instance.new("ScrollingFrame"); Content.Size = UDim2.new(1, -100, 1, -10); Content.Position = UDim2.new(0, 100, 0, 5); Content.BackgroundTransparency = 1; Content.Parent = MainFrame
     Content.ZIndex = 7
     Content.ScrollBarThickness = 2
@@ -180,31 +179,6 @@ local function StartCheat()
                     b.MouseButton1Click:Connect(function() Config[key] = not Config[key]; b.Text = tName .. ": " .. (Config[key] and "ON" or "OFF") end)
                 end
                 AddToggle("Infinite Jump", "InfJump", 5)
-                AddToggle("Speed (Vomagla)", "Speed_Enabled", 40)
-                
-                local speedFrame = Instance.new("Frame"); speedFrame.Size = UDim2.new(1, -10, 0, 45); speedFrame.Position = UDim2.new(0, 5, 0, 80); speedFrame.BackgroundColor3 = Color3.fromRGB(25, 15, 35); speedFrame.Parent = Content
-                speedFrame.ZIndex = 9
-                Instance.new("UICorner", speedFrame).CornerRadius = UDim.new(0, 4)
-                local speedText = Instance.new("TextLabel"); speedText.Size = UDim2.new(1, -20, 0, 15); speedText.Position = UDim2.new(0, 10, 0, 5); speedText.BackgroundTransparency = 1; speedText.Text = "Speed Value: " .. Config.Speed_Value; speedText.TextColor3 = Color3.new(1,1,1); speedText.Font = Enum.Font.Gotham; speedText.TextSize = 12; speedText.TextXAlignment = Enum.TextXAlignment.Left; speedText.Parent = speedFrame
-                speedText.ZIndex = 10
-                local speedBar = Instance.new("Frame"); speedBar.Size = UDim2.new(1, -20, 0, 4); speedBar.Position = UDim2.new(0, 10, 0, 25); speedBar.BackgroundColor3 = Color3.fromRGB(50, 50, 60); speedBar.Parent = speedFrame
-                speedBar.ZIndex = 10
-                local speedFill = Instance.new("Frame"); speedFill.Size = UDim2.new((Config.Speed_Value - 16) / 84, 0, 1, 0); speedFill.BackgroundColor3 = Color3.fromRGB(150, 80, 255); speedFill.Parent = speedBar
-                speedFill.ZIndex = 11
-                local speedInput = Instance.new("TextButton"); speedInput.Size = UDim2.new(1, 20, 1, 20); speedInput.Position = UDim2.new(0, -10, 0, -10); speedInput.BackgroundTransparency = 1; speedInput.Text = ""; speedInput.Parent = speedBar
-                speedInput.ZIndex = 12
-                local speedDragging = false
-                speedInput.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then speedDragging = true end end)
-                UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then speedDragging = false end end)
-                UserInputService.InputChanged:Connect(function(i)
-                    if speedDragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-                        local p = math.clamp((i.Position.X - speedBar.AbsolutePosition.X) / speedBar.AbsoluteSize.X, 0, 1)
-                        local v = math.floor(16 + 84 * p)
-                        Config.Speed_Value = v
-                        speedText.Text = "Speed Value: " .. v
-                        speedFill.Size = UDim2.new(p, 0, 1, 0)
-                    end
-                end)
             end
         end)
     end
@@ -353,19 +327,6 @@ local function StartCheat()
                 FOV_Stroke.Color = Color3.fromRGB(0, 255, 0)
             else
                 FOV_Stroke.Color = Color3.fromRGB(255, 0, 0)
-            end
-        end
-
-        -- SPEED (Как в Vomagla через WalkSpeed)
-        if Config.Speed_Enabled and LP.Character then
-            local hum = LP.Character:FindFirstChild("Humanoid")
-            if hum then
-                hum.WalkSpeed = Config.Speed_Value
-            end
-        else
-            local hum = LP.Character and LP.Character:FindFirstChild("Humanoid")
-            if hum then
-                hum.WalkSpeed = 16 -- Стандартная скорость
             end
         end
     end)
