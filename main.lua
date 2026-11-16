@@ -1,4 +1,4 @@
---[[ ROST ALPHA | Premium UI + No Deco + Aim + ESP (Fixed Gun Hook) ]]
+--[[ ROST ALPHA | Premium UI + No Deco + Reg Aim + ESP ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -20,7 +20,7 @@ local KEY_DATABASE = {
 local UserRole = "free"
 
 local Config = {
-    Aim_Enabled = false, Aim_Mode = "Silent",
+    Aim_Enabled = false, Aim_Mode = "Silent", -- Silent или Camera
     TargetPart = "Head", FOV = 150, WallCheck = false, MaxDist = 3000,
     ESP_Enabled = false, ESP_Box = true, ESP_Name = true, ESP_Dist = true, ESP_HP = true, ESP_Skeleton = false,
     Speed_Enabled = false, Speed_Value = 30, Fullbright = false, NoDeco = false,
@@ -48,15 +48,10 @@ local function StartCheat()
     Players.PlayerAdded:Connect(function(p) playerCache[p] = true end)
     Players.PlayerRemoving:Connect(function(p) playerCache[p] = nil end)
 
-    -- Размытие (Blur)
-    local Blur = Instance.new("BlurEffect")
-    Blur.Size = 0
-    Blur.Parent = Lighting
+    local Blur = Instance.new("BlurEffect"); Blur.Size = 0; Blur.Parent = Lighting
 
-    -- Меню
     local MenuGui = Instance.new("ScreenGui"); MenuGui.Name = "sg_" .. rnd(); MenuGui.ResetOnSpawn = false; MenuGui.IgnoreGuiInset = true; MenuGui.DisplayOrder = 50; MenuGui.Parent = GuiParent
     
-    -- FOV Круг
     local FOV_Gui = Instance.new("ScreenGui"); FOV_Gui.Name = "sg_" .. rnd(); FOV_Gui.ResetOnSpawn = false; FOV_Gui.IgnoreGuiInset = true; FOV_Gui.DisplayOrder = 40; FOV_Gui.Parent = GuiParent
     local FOV_Frame = Instance.new("Frame"); FOV_Frame.Name = "f_" .. rnd(); FOV_Frame.BackgroundTransparency = 1; FOV_Frame.AnchorPoint = Vector2.new(0.5, 0.5); 
     FOV_Frame.Position = UDim2.new(0.5, 0, 0.5, Config.FOV_Offset_Y); 
@@ -64,7 +59,6 @@ local function StartCheat()
     local FOV_Corner = Instance.new("UICorner"); FOV_Corner.CornerRadius = UDim.new(1, 0); FOV_Corner.Parent = FOV_Frame
     local FOV_Stroke = Instance.new("UIStroke"); FOV_Stroke.Color = Color3.fromRGB(255, 0, 0); FOV_Stroke.Thickness = 2; FOV_Stroke.Transparency = 0.1; FOV_Stroke.Parent = FOV_Frame
 
-    -- Кнопка "F"
     local ToggleBtn = Instance.new("TextButton"); ToggleBtn.Size = UDim2.new(0, 50, 0, 50); ToggleBtn.Position = UDim2.new(0.5, -25, 0.5, -25); ToggleBtn.BackgroundColor3 = Color3.fromRGB(150, 80, 255); ToggleBtn.Text = "F"; ToggleBtn.TextColor3 = Color3.new(1,1,1); ToggleBtn.Font = Enum.Font.GothamBold; ToggleBtn.TextSize = 20; ToggleBtn.Parent = MenuGui
     Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
     ToggleBtn.ZIndex = 100
@@ -86,7 +80,6 @@ local function StartCheat()
         end
     end)
 
-    -- Главное окно
     local MainFrame = Instance.new("Frame"); MainFrame.Size = UDim2.new(0, 380, 0, 280); MainFrame.Position = UDim2.new(0.5, -190, 0.5, -140); MainFrame.BackgroundColor3 = Color3.fromRGB(18, 12, 24); MainFrame.Visible = false; MainFrame.Parent = MenuGui
     MainFrame.ZIndex = 5
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
@@ -193,7 +186,6 @@ local function StartCheat()
     CreateTab("Combat", "🎯"); CreateTab("Visual", "👁️"); CreateTab("Player", "🏃")
     Tabs[1].btn.TextColor3 = Color3.fromRGB(150, 80, 255)
 
-    -- Снежинки
     local SnowContainer = Instance.new("Frame")
     SnowContainer.Size = UDim2.new(1, 0, 1, 0)
     SnowContainer.BackgroundTransparency = 1
@@ -222,7 +214,6 @@ local function StartCheat()
         end
     end)
 
-    -- ESP
     local ESP = {}
     local function CreateESP(pl)
         if pl == LP or ESP[pl] then return end
@@ -333,7 +324,6 @@ local function StartCheat()
         end
     end)
 
-    -- Camera Lock
     local oldCFrame = nil
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
@@ -346,30 +336,36 @@ local function StartCheat()
     end)
 
     -- ==========================================
-    -- ROBUST SILENT AIM (Hook Remotes)
+    -- ULTIMATE SILENT AIM (Перехват всех ремоутов стрельбы)
     -- ==========================================
     pcall(function()
-        -- Ищем все RemoteEvents в ReplicatedStorage, которые отвечают за выстрелы
+        -- Ищем все ремоуты, которые могут отправлять данные о выстреле
         for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-            if obj:IsA("RemoteEvent") and (obj.Name:lower():find("fire") or obj.Name:lower():find("shoot") or obj.Name:lower():find("hit")) then
-                local oldFireServer = obj.FireServer
-                obj.FireServer = function(self, ...)
-                    local args = {...}
-                    if Config.Aim_Enabled and Config.Aim_Mode == "Silent" and _G.CurrentTarget then
-                        local targetPos = _G.CurrentTarget.Position
-                        for i, v in ipairs(args) do
-                            if typeof(v) == "Vector3" then
-                                args[i] = targetPos
-                            elseif typeof(v) == "buffer" then
-                                pcall(function()
-                                    buffer.writef32(v, 4, targetPos.X)
-                                    buffer.writef32(v, 8, targetPos.Y)
-                                    buffer.writef32(v, 12, targetPos.Z)
-                                end)
+            if obj:IsA("RemoteEvent") then
+                local name = obj.Name:lower()
+                if name:find("fire") or name:find("shoot") or name:find("hit") or name:find("recoil") then
+                    local oldFireServer = obj.FireServer
+                    obj.FireServer = function(self, ...)
+                        local args = {...}
+                        if Config.Aim_Enabled and Config.Aim_Mode == "Silent" and _G.CurrentTarget then
+                            local targetPos = _G.CurrentTarget.Position
+                            for i, v in ipairs(args) do
+                                if typeof(v) == "Vector3" then
+                                    -- Прямая подмена координат
+                                    args[i] = targetPos
+                                elseif typeof(v) == "buffer" then
+                                    -- Если данные передаются в буфере (как в Vomagla)
+                                    pcall(function()
+                                        -- Пробуем разные смещения, так как буфер может быть разным
+                                        buffer.writef32(v, 4, targetPos.X)
+                                        buffer.writef32(v, 8, targetPos.Y)
+                                        buffer.writef32(v, 12, targetPos.Z)
+                                    end)
+                                end
                             end
                         end
+                        return oldFireServer(self, table.unpack(args))
                     end
-                    return oldFireServer(self, table.unpack(args))
                 end
             end
         end
