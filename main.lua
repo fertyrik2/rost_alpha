@@ -1,4 +1,4 @@
---[[ ROST ALPHA | Vomagla Style (Fixed WallCheck) ]]
+--[[ ROST ALPHA | Premium UI + Fixes + Misc (Inf Jump + Vomagla Speed) ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -19,11 +19,10 @@ local KEY_DATABASE = {
 local UserRole = "free"
 
 local Config = {
-    Aim_Enabled = false, 
-    TargetPart = "Head", 
-    FOV = 150, WallCheck = false, MaxDist = 3000,
+    Aim_Enabled = false, TargetPart = "Head", FOV = 150, WallCheck = false, MaxDist = 3000,
     ESP_Enabled = false, ESP_Box = true, ESP_Name = true, ESP_Dist = true, ESP_HP = true, ESP_Skeleton = false,
     Speed_Enabled = false, Speed_Value = 30, Fullbright = false, NoDeco = false,
+    SnowEnabled = true, InfJump = false,
     FOV_Offset_Y = 20
 }
 
@@ -97,8 +96,13 @@ local function StartCheat()
     Sidebar.ZIndex = 6
     Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 8)
     
-    local Content = Instance.new("Frame"); Content.Size = UDim2.new(1, -100, 1, -10); Content.Position = UDim2.new(0, 100, 0, 5); Content.BackgroundTransparency = 1; Content.Parent = MainFrame
+    -- Скроллинг контента
+    local Content = Instance.new("ScrollingFrame"); Content.Size = UDim2.new(1, -100, 1, -10); Content.Position = UDim2.new(0, 100, 0, 5); Content.BackgroundTransparency = 1; Content.Parent = MainFrame
     Content.ZIndex = 7
+    Content.ScrollBarThickness = 2
+    Content.ScrollBarImageColor3 = Color3.fromRGB(150, 80, 255)
+    Content.CanvasSize = UDim2.new(0, 0, 0, 0) 
+    Content.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
     local Tabs = {}
     local function CreateTab(name, icon)
@@ -167,26 +171,54 @@ local function StartCheat()
                 AddToggle("Skeleton", "ESP_Skeleton", 180)
                 AddToggle("Fullbright", "Fullbright", 215)
                 AddToggle("No Deco", "NoDeco", 250)
-            elseif name == "Player" then
+                AddToggle("Snow Effects", "SnowEnabled", 285)
+            elseif name == "Misc" then
                 local function AddToggle(tName, key, pos)
                     local b = Instance.new("TextButton"); b.Size = UDim2.new(1, -10, 0, 30); b.Position = UDim2.new(0, 5, 0, pos); b.BackgroundColor3 = Color3.fromRGB(25, 15, 35); b.Text = tName .. ": " .. (Config[key] and "ON" or "OFF"); b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.Gotham; b.TextSize = 13; b.Parent = Content
                     b.ZIndex = 9
                     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
                     b.MouseButton1Click:Connect(function() Config[key] = not Config[key]; b.Text = tName .. ": " .. (Config[key] and "ON" or "OFF") end)
                 end
-                AddToggle("Speed", "Speed_Enabled", 5)
+                AddToggle("Infinite Jump", "InfJump", 5)
+                AddToggle("Speed (Vomagla)", "Speed_Enabled", 40)
+                
+                local speedFrame = Instance.new("Frame"); speedFrame.Size = UDim2.new(1, -10, 0, 45); speedFrame.Position = UDim2.new(0, 5, 0, 80); speedFrame.BackgroundColor3 = Color3.fromRGB(25, 15, 35); speedFrame.Parent = Content
+                speedFrame.ZIndex = 9
+                Instance.new("UICorner", speedFrame).CornerRadius = UDim.new(0, 4)
+                local speedText = Instance.new("TextLabel"); speedText.Size = UDim2.new(1, -20, 0, 15); speedText.Position = UDim2.new(0, 10, 0, 5); speedText.BackgroundTransparency = 1; speedText.Text = "Speed Value: " .. Config.Speed_Value; speedText.TextColor3 = Color3.new(1,1,1); speedText.Font = Enum.Font.Gotham; speedText.TextSize = 12; speedText.TextXAlignment = Enum.TextXAlignment.Left; speedText.Parent = speedFrame
+                speedText.ZIndex = 10
+                local speedBar = Instance.new("Frame"); speedBar.Size = UDim2.new(1, -20, 0, 4); speedBar.Position = UDim2.new(0, 10, 0, 25); speedBar.BackgroundColor3 = Color3.fromRGB(50, 50, 60); speedBar.Parent = speedFrame
+                speedBar.ZIndex = 10
+                local speedFill = Instance.new("Frame"); speedFill.Size = UDim2.new((Config.Speed_Value - 16) / 84, 0, 1, 0); speedFill.BackgroundColor3 = Color3.fromRGB(150, 80, 255); speedFill.Parent = speedBar
+                speedFill.ZIndex = 11
+                local speedInput = Instance.new("TextButton"); speedInput.Size = UDim2.new(1, 20, 1, 20); speedInput.Position = UDim2.new(0, -10, 0, -10); speedInput.BackgroundTransparency = 1; speedInput.Text = ""; speedInput.Parent = speedBar
+                speedInput.ZIndex = 12
+                local speedDragging = false
+                speedInput.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then speedDragging = true end end)
+                UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then speedDragging = false end end)
+                UserInputService.InputChanged:Connect(function(i)
+                    if speedDragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+                        local p = math.clamp((i.Position.X - speedBar.AbsolutePosition.X) / speedBar.AbsoluteSize.X, 0, 1)
+                        local v = math.floor(16 + 84 * p)
+                        Config.Speed_Value = v
+                        speedText.Text = "Speed Value: " .. v
+                        speedFill.Size = UDim2.new(p, 0, 1, 0)
+                    end
+                end)
             end
         end)
     end
-    CreateTab("Combat", "🎯"); CreateTab("Visual", "👁️"); CreateTab("Player", "🏃")
+    CreateTab("Combat", "🎯"); CreateTab("Visual", "👁️"); CreateTab("Misc", "⚙️")
     Tabs[1].btn.TextColor3 = Color3.fromRGB(150, 80, 255)
 
+    -- Снежинки
     local SnowContainer = Instance.new("Frame")
     SnowContainer.Size = UDim2.new(1, 0, 1, 0)
     SnowContainer.BackgroundTransparency = 1
     SnowContainer.Parent = MenuGui
     SnowContainer.ZIndex = 1
     SnowContainer.ClipsDescendants = true
+    SnowContainer.Visible = Config.SnowEnabled
 
     local Snowflakes = {}
     for i = 1, 50 do
@@ -201,7 +233,7 @@ local function StartCheat()
     end
 
     RunService.RenderStepped:Connect(function(dt)
-        if not SnowContainer.Visible then return end
+        if not SnowContainer.Visible or not Config.SnowEnabled then return end
         for _, sf in ipairs(Snowflakes) do
             local newY = sf.frame.Position.Y.Scale + (sf.speed * dt)
             if newY > 1 then newY = -0.05; sf.frame.Position = UDim2.new(math.random(), 0, newY, 0) 
@@ -228,28 +260,21 @@ local function StartCheat()
 
     local OldLighting = {Ambient = Lighting.Ambient, OutdoorAmbient = Lighting.OutdoorAmbient, Brightness = Lighting.Brightness}
     
-    -- УЛУЧШЕННЫЙ WALLCHECK
     local function isVisible(targetPart, targetChar)
         local rayParams = RaycastParams.new()
         rayParams.FilterDescendantsInstances = {LP.Character, targetChar}
         rayParams.FilterType = Enum.RaycastFilterType.Exclude
         rayParams.IgnoreWater = true
-        
-        -- Стреляем из головы персонажа, а не из камеры
         local rayOrigin = LP.Character and LP.Character:FindFirstChild("Head") and LP.Character.Head.Position or Camera.CFrame.Position
-        
-        -- Проверяем не одну точку, а 3 точки (голова, торс, ноги)
         local points = {
             targetChar:FindFirstChild("Head") and targetChar.Head.Position,
             targetChar:FindFirstChild("HumanoidRootPart") and targetChar.HumanoidRootPart.Position,
             targetChar:FindFirstChild("UpperTorso") and targetChar.UpperTorso.Position or targetChar:FindFirstChild("Torso") and targetChar.Torso.Position
         }
-        
         for _, point in ipairs(points) do
             if point then
-                local rayDirection = point - rayOrigin
-                local result = Workspace:Raycast(rayOrigin, rayDirection, rayParams)
-                if not result then return true end -- Если хотя бы одна точка видна, цель видима
+                local result = Workspace:Raycast(rayOrigin, point - rayOrigin, rayParams)
+                if not result then return true end
             end
         end
         return false
@@ -260,6 +285,7 @@ local function StartCheat()
         local closest, minDist = nil, Config.FOV
 
         FOV_Frame.Visible = Config.Aim_Enabled
+        SnowContainer.Visible = Config.SnowEnabled
 
         if Config.NoDeco then
             local terrain = Workspace:FindFirstChildOfClass("Terrain")
@@ -330,18 +356,32 @@ local function StartCheat()
             end
         end
 
+        -- SPEED (Как в Vomagla через WalkSpeed)
         if Config.Speed_Enabled and LP.Character then
-            local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
             local hum = LP.Character:FindFirstChild("Humanoid")
-            if hrp and hum and hum.MoveDirection.Magnitude > 0 then
-                hrp.Velocity = Vector3.new(hum.MoveDirection.X * Config.Speed_Value, hrp.Velocity.Y, hum.MoveDirection.Z * Config.Speed_Value)
+            if hum then
+                hum.WalkSpeed = Config.Speed_Value
+            end
+        else
+            local hum = LP.Character and LP.Character:FindFirstChild("Humanoid")
+            if hum then
+                hum.WalkSpeed = 16 -- Стандартная скорость
             end
         end
     end)
 
-    -- ==========================================
+    -- INFINITE JUMP
+    UserInputService.JumpRequest:Connect(function()
+        if Config.InfJump then
+            local char = LP.Character
+            if char then
+                local hum = char:FindFirstChild("Humanoid")
+                if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+            end
+        end
+    end)
+
     -- RAYCAST HOOK
-    -- ==========================================
     if hookmetamethod and getnamecallmethod then
         local oldNamecall
         oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
