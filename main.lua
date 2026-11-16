@@ -1,11 +1,10 @@
---[[ ROST ALPHA | Premium UI + No Deco + Reg Aim + ESP ]]
+--[[ ROST ALPHA | Premium UI + Instant Projectile Magnet ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LP = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
@@ -20,8 +19,7 @@ local KEY_DATABASE = {
 local UserRole = "free"
 
 local Config = {
-    Aim_Enabled = false, Aim_Mode = "Silent", -- Silent или Camera
-    TargetPart = "Head", FOV = 150, WallCheck = false, MaxDist = 3000,
+    Aim_Enabled = false, TargetPart = "Head", FOV = 150, WallCheck = false, MaxDist = 3000,
     ESP_Enabled = false, ESP_Box = true, ESP_Name = true, ESP_Dist = true, ESP_HP = true, ESP_Skeleton = false,
     Speed_Enabled = false, Speed_Value = 30, Fullbright = false, NoDeco = false,
     FOV_Offset_Y = 20
@@ -117,23 +115,10 @@ local function StartCheat()
                     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
                     b.MouseButton1Click:Connect(function() Config[key] = not Config[key]; b.Text = tName .. ": " .. (Config[key] and "ON" or "OFF") end)
                 end
-                AddToggle("Aim (Master)", "Aim_Enabled", 5)
+                AddToggle("Silent Aim (Projectile)", "Aim_Enabled", 5)
                 AddToggle("Wall Check", "WallCheck", 40)
                 
-                local modeBtn = Instance.new("TextButton"); modeBtn.Size = UDim2.new(1, -10, 0, 30); modeBtn.Position = UDim2.new(0, 5, 0, 80); modeBtn.BackgroundColor3 = Color3.fromRGB(50, 30, 70); modeBtn.Text = "Mode: " .. Config.Aim_Mode; modeBtn.TextColor3 = Color3.new(1,1,1); modeBtn.Font = Enum.Font.GothamBold; modeBtn.TextSize = 13; modeBtn.Parent = Content
-                modeBtn.ZIndex = 9
-                Instance.new("UICorner", modeBtn).CornerRadius = UDim.new(0, 4)
-                modeBtn.MouseButton1Click:Connect(function()
-                    if Config.Aim_Mode == "Silent" then Config.Aim_Mode = "Camera" else Config.Aim_Mode = "Silent" end
-                    modeBtn.Text = "Mode: " .. Config.Aim_Mode
-                    if Config.Aim_Mode == "Camera" then
-                        FOV_Frame.Position = UDim2.new(0.5, 0, 0.6, 0) 
-                    else
-                        FOV_Frame.Position = UDim2.new(0.5, 0, 0.5, Config.FOV_Offset_Y) 
-                    end
-                end)
-
-                local fovFrame = Instance.new("Frame"); fovFrame.Size = UDim2.new(1, -10, 0, 45); fovFrame.Position = UDim2.new(0, 5, 0, 120); fovFrame.BackgroundColor3 = Color3.fromRGB(25, 15, 35); fovFrame.Parent = Content
+                local fovFrame = Instance.new("Frame"); fovFrame.Size = UDim2.new(1, -10, 0, 45); fovFrame.Position = UDim2.new(0, 5, 0, 80); fovFrame.BackgroundColor3 = Color3.fromRGB(25, 15, 35); fovFrame.Parent = Content
                 fovFrame.ZIndex = 9
                 Instance.new("UICorner", fovFrame).CornerRadius = UDim.new(0, 4)
                 local fovText = Instance.new("TextLabel"); fovText.Size = UDim2.new(1, -20, 0, 15); fovText.Position = UDim2.new(0, 10, 0, 5); fovText.BackgroundTransparency = 1; fovText.Text = "FOV Radius: " .. Config.FOV; fovText.TextColor3 = Color3.new(1,1,1); fovText.Font = Enum.Font.Gotham; fovText.TextSize = 12; fovText.TextXAlignment = Enum.TextXAlignment.Left; fovText.Parent = fovFrame
@@ -324,52 +309,43 @@ local function StartCheat()
         end
     end)
 
-    local oldCFrame = nil
-    UserInputService.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and Config.Aim_Enabled and Config.Aim_Mode == "Camera" and _G.CurrentTarget then
-            oldCFrame = Camera.CFrame
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, _G.CurrentTarget.Position)
-            task.wait(0.05)
-            if oldCFrame then Camera.CFrame = oldCFrame end
-        end
-    end)
+    -- ==========================================
+    -- INSTANT PROJECTILE MAGNET (Аим на стрелы и пули)
+    -- ==========================================
+    -- Следим за папкой Bullets (там спавнятся стрелы/пули)
+    local BulletsFolder = Workspace:FindFirstChild("Bullets")
+    if not BulletsFolder then
+        Workspace.ChildAdded:Connect(function(child)
+            if child.Name == "Bullets" then BulletsFolder = child end
+        end)
+    end
 
-    -- ==========================================
-    -- ULTIMATE SILENT AIM (Перехват всех ремоутов стрельбы)
-    -- ==========================================
-    pcall(function()
-        -- Ищем все ремоуты, которые могут отправлять данные о выстреле
-        for _, obj in ipairs(ReplicatedStorage:GetDescendants()) do
-            if obj:IsA("RemoteEvent") then
-                local name = obj.Name:lower()
-                if name:find("fire") or name:find("shoot") or name:find("hit") or name:find("recoil") then
-                    local oldFireServer = obj.FireServer
-                    obj.FireServer = function(self, ...)
-                        local args = {...}
-                        if Config.Aim_Enabled and Config.Aim_Mode == "Silent" and _G.CurrentTarget then
-                            local targetPos = _G.CurrentTarget.Position
-                            for i, v in ipairs(args) do
-                                if typeof(v) == "Vector3" then
-                                    -- Прямая подмена координат
-                                    args[i] = targetPos
-                                elseif typeof(v) == "buffer" then
-                                    -- Если данные передаются в буфере (как в Vomagla)
-                                    pcall(function()
-                                        -- Пробуем разные смещения, так как буфер может быть разным
-                                        buffer.writef32(v, 4, targetPos.X)
-                                        buffer.writef32(v, 8, targetPos.Y)
-                                        buffer.writef32(v, 12, targetPos.Z)
-                                    end)
-                                end
-                            end
-                        end
-                        return oldFireServer(self, table.unpack(args))
+    local function MagneticProjectile(obj)
+        if not Config.Aim_Enabled or not _G.CurrentTarget then return end
+        -- Проверяем, что это стрела/пуля
+        if obj:IsA("BasePart") or obj:IsA("Model") then
+            local isProjectile = obj.Name:lower():find("arrow") or obj.Name:lower():find("bullet") or obj.Name:lower():find("projectile")
+            if isProjectile then
+                -- Мгновенно телепортируем в голову и обнуляем скорость, чтобы она не летела дальше
+                local targetPos = _G.CurrentTarget.Position
+                if obj:IsA("BasePart") then
+                    obj.CFrame = CFrame.new(targetPos)
+                    obj.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                else
+                    local primary = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                    if primary then
+                        obj:SetPrimaryPartCFrame(CFrame.new(targetPos))
+                        primary.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                     end
                 end
             end
         end
-    end)
+    end
+
+    -- Подключаемся к папке Bullets
+    if BulletsFolder then
+        BulletsFolder.DescendantAdded:Connect(MagneticProjectile)
+    end
 end
 
 KeySubmit.MouseButton1Click:Connect(function()
