@@ -1,10 +1,11 @@
---[[ ROST ALPHA | Premium UI + No Deco + Aim + ESP ]]
+--[[ ROST ALPHA | Vomagla Style Aim + No Deco + ESP ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LP = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
@@ -40,6 +41,9 @@ local KeySubmit = Instance.new("TextButton"); KeySubmit.Size = UDim2.new(1, -20,
 -- ОСНОВНОЙ ФУНКЦИОНАЛ
 -- ==========================================
 local function StartCheat()
+    -- Переменная для текущей цели
+    _G.CurrentTarget = nil
+    
     local playerCache = {}
     for _, p in ipairs(Players:GetPlayers()) do if p ~= LP then playerCache[p] = true end end
     Players.PlayerAdded:Connect(function(p) playerCache[p] = true end)
@@ -238,8 +242,8 @@ local function StartCheat()
     Players.PlayerAdded:Connect(function(p) CreateESP(p) end)
 
     local OldLighting = {Ambient = Lighting.Ambient, OutdoorAmbient = Lighting.OutdoorAmbient, Brightness = Lighting.Brightness}
-    local CurrentTarget = nil
-
+    
+    -- Функция проверки видимости (WallCheck)
     local function isVisible(targetPart, targetChar)
         local rayParams = RaycastParams.new()
         rayParams.FilterDescendantsInstances = {LP.Character, targetChar}
@@ -256,14 +260,13 @@ local function StartCheat()
 
         FOV_Frame.Visible = Config.Aim_Enabled
 
-        -- No Deco (Убирает траву и мусор)
+        -- No Deco
         if Config.NoDeco then
             local terrain = Workspace:FindFirstChildOfClass("Terrain")
-            if terrain then
-                pcall(function() sethiddenproperty(terrain, "Decoration", false) end)
-            end
+            if terrain then pcall(function() sethiddenproperty(terrain, "Decoration", false) end) end
         end
 
+        -- Fullbright
         if Config.Fullbright then
             Lighting.Ambient = Color3.fromRGB(255, 255, 255); Lighting.OutdoorAmbient = Color3.fromRGB(255, 255, 255); Lighting.Brightness = 2
         else
@@ -315,11 +318,10 @@ local function StartCheat()
             end
         end
 
-        CurrentTarget = closest
         _G.CurrentTarget = closest
 
         if Config.Aim_Enabled then
-            if CurrentTarget then
+            if _G.CurrentTarget then
                 FOV_Stroke.Color = Color3.fromRGB(0, 255, 0)
             else
                 FOV_Stroke.Color = Color3.fromRGB(255, 0, 0)
@@ -339,34 +341,47 @@ local function StartCheat()
     local oldCFrame = nil
     UserInputService.InputBegan:Connect(function(input, gameProcessed)
         if gameProcessed then return end
-        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and Config.Aim_Enabled and Config.Aim_Mode == "Camera" and CurrentTarget then
+        if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and Config.Aim_Enabled and Config.Aim_Mode == "Camera" and _G.CurrentTarget then
             oldCFrame = Camera.CFrame
-            Camera.CFrame = CFrame.new(Camera.CFrame.Position, CurrentTarget.Position)
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, _G.CurrentTarget.Position)
             task.wait(0.05)
             if oldCFrame then Camera.CFrame = oldCFrame end
         end
     end)
 
-    -- Silent Aim Hook
-    if hookmetamethod and getnamecallmethod then
-        local oldNamecall
-        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
-            local method = getnamecallmethod()
-            if method == "Raycast" and self == Workspace then
-                if checkcaller() then return oldNamecall(self, ...) end
-                local args = {...}
-                local origin, direction = args[1], args[2]
-                if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" and direction.Magnitude > 50 then
-                    if Config.Aim_Enabled and Config.Aim_Mode == "Silent" and _G.CurrentTarget then
-                        local targetPos = _G.CurrentTarget.Position + (_G.CurrentTarget.Velocity * 0.05)
-                        local newDir = (targetPos - origin).Unit * direction.Magnitude
-                        return oldNamecall(self, origin, newDir, args[3])
+    -- ==========================================
+    -- VOMAGLA STYLE SILENT AIM (Hook Fire)
+    -- ==========================================
+    pcall(function()
+        local GunBase = require(ReplicatedStorage.Gun.Scripts.GunBase)
+        local oldFire = GunBase.fire
+        
+        GunBase.fire = function(self, ...)
+            local args = {...}
+            
+            -- Если аим включен и есть цель, подменяем координаты выстрела
+            if Config.Aim_Enabled and Config.Aim_Mode == "Silent" and _G.CurrentTarget then
+                local targetPos = _G.CurrentTarget.Position
+                
+                -- Ищем Vector3 в аргументах и меняем его
+                for i, v in ipairs(args) do
+                    if typeof(v) == "Vector3" then
+                        args[i] = targetPos
+                    elseif typeof(v) == "buffer" then
+                        -- Если аргумент - буфер, вписываем координаты в него (Roblox часто шлет Vector3 в буферах)
+                        pcall(function()
+                            buffer.writef32(v, 4,  targetPos.X)
+                            buffer.writef32(v, 8,  targetPos.Y)
+                            buffer.writef32(v, 12, targetPos.Z)
+                        end)
                     end
                 end
+                return oldFire(self, table.unpack(args))
             end
-            return oldNamecall(self, ...)
-        end)
-    end
+            
+            return oldFire(self, ...)
+        end
+    end)
 end
 
 KeySubmit.MouseButton1Click:Connect(function()
