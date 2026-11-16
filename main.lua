@@ -1,4 +1,4 @@
---[[ ROST ALPHA | Premium UI + Instant Projectile Magnet ]]
+--[[ ROST ALPHA | Vomagla Style (Target Switch + Silent Aim) ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -19,7 +19,9 @@ local KEY_DATABASE = {
 local UserRole = "free"
 
 local Config = {
-    Aim_Enabled = false, TargetPart = "Head", FOV = 150, WallCheck = false, MaxDist = 3000,
+    Aim_Enabled = false, 
+    TargetPart = "Head", -- По умолчанию голова, можно переключить на Torso
+    FOV = 150, WallCheck = false, MaxDist = 3000,
     ESP_Enabled = false, ESP_Box = true, ESP_Name = true, ESP_Dist = true, ESP_HP = true, ESP_Skeleton = false,
     Speed_Enabled = false, Speed_Value = 30, Fullbright = false, NoDeco = false,
     FOV_Offset_Y = 20
@@ -115,10 +117,19 @@ local function StartCheat()
                     Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
                     b.MouseButton1Click:Connect(function() Config[key] = not Config[key]; b.Text = tName .. ": " .. (Config[key] and "ON" or "OFF") end)
                 end
-                AddToggle("Silent Aim (Projectile)", "Aim_Enabled", 5)
+                AddToggle("Silent Aim", "Aim_Enabled", 5)
                 AddToggle("Wall Check", "WallCheck", 40)
                 
-                local fovFrame = Instance.new("Frame"); fovFrame.Size = UDim2.new(1, -10, 0, 45); fovFrame.Position = UDim2.new(0, 5, 0, 80); fovFrame.BackgroundColor3 = Color3.fromRGB(25, 15, 35); fovFrame.Parent = Content
+                -- Кнопка выбора цели (Head / Torso)
+                local targetBtn = Instance.new("TextButton"); targetBtn.Size = UDim2.new(1, -10, 0, 30); targetBtn.Position = UDim2.new(0, 5, 0, 80); targetBtn.BackgroundColor3 = Color3.fromRGB(50, 30, 70); targetBtn.Text = "Target: " .. Config.TargetPart; targetBtn.TextColor3 = Color3.new(1,1,1); targetBtn.Font = Enum.Font.GothamBold; targetBtn.TextSize = 13; targetBtn.Parent = Content
+                targetBtn.ZIndex = 9
+                Instance.new("UICorner", targetBtn).CornerRadius = UDim.new(0, 4)
+                targetBtn.MouseButton1Click:Connect(function()
+                    if Config.TargetPart == "Head" then Config.TargetPart = "HumanoidRootPart" else Config.TargetPart = "Head" end
+                    targetBtn.Text = "Target: " .. Config.TargetPart
+                end)
+
+                local fovFrame = Instance.new("Frame"); fovFrame.Size = UDim2.new(1, -10, 0, 45); fovFrame.Position = UDim2.new(0, 5, 0, 120); fovFrame.BackgroundColor3 = Color3.fromRGB(25, 15, 35); fovFrame.Parent = Content
                 fovFrame.ZIndex = 9
                 Instance.new("UICorner", fovFrame).CornerRadius = UDim.new(0, 4)
                 local fovText = Instance.new("TextLabel"); fovText.Size = UDim2.new(1, -20, 0, 15); fovText.Position = UDim2.new(0, 10, 0, 5); fovText.BackgroundTransparency = 1; fovText.Text = "FOV Radius: " .. Config.FOV; fovText.TextColor3 = Color3.new(1,1,1); fovText.Font = Enum.Font.Gotham; fovText.TextSize = 12; fovText.TextXAlignment = Enum.TextXAlignment.Left; fovText.Parent = fovFrame
@@ -272,18 +283,21 @@ local function StartCheat()
                 if e.box then e.box.Visible = false end; if e.name then e.name.Visible = false end; if e.dist then e.dist.Visible = false end; if e.hpBg then e.hpBg.Visible = false; e.hpFill.Visible = false end
             end
 
-            if Config.Aim_Enabled and hum and hum.Health > 0 and head then
-                local sp, vis2 = Camera:WorldToViewportPoint(head.Position)
-                if vis2 then
-                    local d = (Vector2.new(sp.X, sp.Y) - center).Magnitude
-                    local realDist = (LP.Character.HumanoidRootPart.Position - head.Position).Magnitude
-                    if d < minDist and realDist <= Config.MaxDist then 
-                        if Config.WallCheck then
-                            if isVisible(head, ch) then
-                                minDist = d; closest = head 
+            if Config.Aim_Enabled and hum and hum.Health > 0 then
+                local aimPart = ch:FindFirstChild(Config.TargetPart) or hrp
+                if aimPart then
+                    local sp, vis2 = Camera:WorldToViewportPoint(aimPart.Position)
+                    if vis2 then
+                        local d = (Vector2.new(sp.X, sp.Y) - center).Magnitude
+                        local realDist = (LP.Character.HumanoidRootPart.Position - aimPart.Position).Magnitude
+                        if d < minDist and realDist <= Config.MaxDist then 
+                            if Config.WallCheck then
+                                if isVisible(aimPart, ch) then
+                                    minDist = d; closest = aimPart 
+                                end
+                            else
+                                minDist = d; closest = aimPart 
                             end
-                        else
-                            minDist = d; closest = head 
                         end
                     end
                 end
@@ -310,41 +324,27 @@ local function StartCheat()
     end)
 
     -- ==========================================
-    -- INSTANT PROJECTILE MAGNET (Аим на стрелы и пули)
+    -- RAYCAST HOOK (Бьем в выбранную часть)
     -- ==========================================
-    -- Следим за папкой Bullets (там спавнятся стрелы/пули)
-    local BulletsFolder = Workspace:FindFirstChild("Bullets")
-    if not BulletsFolder then
-        Workspace.ChildAdded:Connect(function(child)
-            if child.Name == "Bullets" then BulletsFolder = child end
-        end)
-    end
-
-    local function MagneticProjectile(obj)
-        if not Config.Aim_Enabled or not _G.CurrentTarget then return end
-        -- Проверяем, что это стрела/пуля
-        if obj:IsA("BasePart") or obj:IsA("Model") then
-            local isProjectile = obj.Name:lower():find("arrow") or obj.Name:lower():find("bullet") or obj.Name:lower():find("projectile")
-            if isProjectile then
-                -- Мгновенно телепортируем в голову и обнуляем скорость, чтобы она не летела дальше
-                local targetPos = _G.CurrentTarget.Position
-                if obj:IsA("BasePart") then
-                    obj.CFrame = CFrame.new(targetPos)
-                    obj.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-                else
-                    local primary = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
-                    if primary then
-                        obj:SetPrimaryPartCFrame(CFrame.new(targetPos))
-                        primary.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+    if hookmetamethod and getnamecallmethod then
+        local oldNamecall
+        oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+            local method = getnamecallmethod()
+            if method == "Raycast" and self == Workspace then
+                if checkcaller() then return oldNamecall(self, ...) end
+                local args = {...}
+                local origin, direction = args[1], args[2]
+                if typeof(origin) == "Vector3" and typeof(direction) == "Vector3" and direction.Magnitude > 50 then
+                    if Config.Aim_Enabled and _G.CurrentTarget then
+                        -- Бьем туда, что выбрано в меню (Head или HumanoidRootPart)
+                        local targetPos = _G.CurrentTarget.Position + (_G.CurrentTarget.Velocity * 0.05)
+                        local newDir = (targetPos - origin).Unit * direction.Magnitude
+                        return oldNamecall(self, origin, newDir, args[3])
                     end
                 end
             end
-        end
-    end
-
-    -- Подключаемся к папке Bullets
-    if BulletsFolder then
-        BulletsFolder.DescendantAdded:Connect(MagneticProjectile)
+            return oldNamecall(self, ...)
+        end)
     end
 end
 
