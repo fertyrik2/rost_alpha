@@ -1,4 +1,4 @@
---[[ ROST ALPHA | Premium UI + Aim + ESP + Inf Jump (No Speed) ]]
+--[[ ROST ALPHA | Premium UI + Swastika Crosshair (Vector) ]]
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -23,6 +23,7 @@ local Config = {
     ESP_Enabled = false, ESP_Box = true, ESP_Name = true, ESP_Dist = true, ESP_HP = true, ESP_Skeleton = false,
     Fullbright = false, NoDeco = false,
     SnowEnabled = true, InfJump = false,
+    SwastikaEnabled = false, SwastikaSpeed = 1, SwastikaSize = 20, SwastikaColor = Color3.fromRGB(255, 0, 0),
     FOV_Offset_Y = 20
 }
 
@@ -171,6 +172,55 @@ local function StartCheat()
                 AddToggle("Fullbright", "Fullbright", 215)
                 AddToggle("No Deco", "NoDeco", 250)
                 AddToggle("Snow Effects", "SnowEnabled", 285)
+                AddToggle("Swastika Crosshair", "SwastikaEnabled", 320)
+                
+                local sizeFrame = Instance.new("Frame"); sizeFrame.Size = UDim2.new(1, -10, 0, 45); sizeFrame.Position = UDim2.new(0, 5, 0, 355); sizeFrame.BackgroundColor3 = Color3.fromRGB(25, 15, 35); sizeFrame.Parent = Content
+                sizeFrame.ZIndex = 9
+                Instance.new("UICorner", sizeFrame).CornerRadius = UDim.new(0, 4)
+                local sizeText = Instance.new("TextLabel"); sizeText.Size = UDim2.new(1, -20, 0, 15); sizeText.Position = UDim2.new(0, 10, 0, 5); sizeText.BackgroundTransparency = 1; sizeText.Text = "Crosshair Size: " .. Config.SwastikaSize; sizeText.TextColor3 = Color3.new(1,1,1); sizeText.Font = Enum.Font.Gotham; sizeText.TextSize = 12; sizeText.TextXAlignment = Enum.TextXAlignment.Left; sizeText.Parent = sizeFrame
+                sizeText.ZIndex = 10
+                local sizeBar = Instance.new("Frame"); sizeBar.Size = UDim2.new(1, -20, 0, 4); sizeBar.Position = UDim2.new(0, 10, 0, 25); sizeBar.BackgroundColor3 = Color3.fromRGB(50, 50, 60); sizeBar.Parent = sizeFrame
+                sizeBar.ZIndex = 10
+                local sizeFill = Instance.new("Frame"); sizeFill.Size = UDim2.new((Config.SwastikaSize - 5) / 45, 0, 1, 0); sizeFill.BackgroundColor3 = Color3.fromRGB(150, 80, 255); sizeFill.Parent = sizeBar
+                sizeFill.ZIndex = 11
+                local sizeInput = Instance.new("TextButton"); sizeInput.Size = UDim2.new(1, 20, 1, 20); sizeInput.Position = UDim2.new(0, -10, 0, -10); sizeInput.BackgroundTransparency = 1; sizeInput.Text = ""; sizeInput.Parent = sizeBar
+                sizeInput.ZIndex = 12
+                local sizeDragging = false
+                sizeInput.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then sizeDragging = true end end)
+                UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then sizeDragging = false end end)
+                UserInputService.InputChanged:Connect(function(i)
+                    if sizeDragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+                        local p = math.clamp((i.Position.X - sizeBar.AbsolutePosition.X) / sizeBar.AbsoluteSize.X, 0, 1)
+                        local v = math.floor(5 + 45 * p)
+                        Config.SwastikaSize = v
+                        sizeText.Text = "Crosshair Size: " .. v
+                        sizeFill.Size = UDim2.new(p, 0, 1, 0)
+                    end
+                end)
+
+                local speedFrame = Instance.new("Frame"); speedFrame.Size = UDim2.new(1, -10, 0, 45); speedFrame.Position = UDim2.new(0, 5, 0, 410); speedFrame.BackgroundColor3 = Color3.fromRGB(25, 15, 35); speedFrame.Parent = Content
+                speedFrame.ZIndex = 9
+                Instance.new("UICorner", speedFrame).CornerRadius = UDim.new(0, 4)
+                local speedText = Instance.new("TextLabel"); speedText.Size = UDim2.new(1, -20, 0, 15); speedText.Position = UDim2.new(0, 10, 0, 5); speedText.BackgroundTransparency = 1; speedText.Text = "Rotation Speed: " .. Config.SwastikaSpeed; speedText.TextColor3 = Color3.new(1,1,1); speedText.Font = Enum.Font.Gotham; speedText.TextSize = 12; speedText.TextXAlignment = Enum.TextXAlignment.Left; speedText.Parent = speedFrame
+                speedText.ZIndex = 10
+                local speedBar = Instance.new("Frame"); speedBar.Size = UDim2.new(1, -20, 0, 4); speedBar.Position = UDim2.new(0, 10, 0, 25); speedBar.BackgroundColor3 = Color3.fromRGB(50, 50, 60); speedBar.Parent = speedFrame
+                speedBar.ZIndex = 10
+                local speedFill = Instance.new("Frame"); speedFill.Size = UDim2.new((Config.SwastikaSpeed - 1) / 10, 0, 1, 0); speedFill.BackgroundColor3 = Color3.fromRGB(150, 80, 255); speedFill.Parent = speedBar
+                speedFill.ZIndex = 11
+                local speedInput = Instance.new("TextButton"); speedInput.Size = UDim2.new(1, 20, 1, 20); speedInput.Position = UDim2.new(0, -10, 0, -10); speedInput.BackgroundTransparency = 1; speedInput.Text = ""; speedInput.Parent = speedBar
+                speedInput.ZIndex = 12
+                local speedDragging = false
+                speedInput.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then speedDragging = true end end)
+                UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then speedDragging = false end end)
+                UserInputService.InputChanged:Connect(function(i)
+                    if speedDragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+                        local p = math.clamp((i.Position.X - speedBar.AbsolutePosition.X) / speedBar.AbsoluteSize.X, 0, 1)
+                        local v = math.floor(1 + 10 * p)
+                        Config.SwastikaSpeed = v
+                        speedText.Text = "Rotation Speed: " .. v
+                        speedFill.Size = UDim2.new(p, 0, 1, 0)
+                    end
+                end)
             elseif name == "Misc" then
                 local function AddToggle(tName, key, pos)
                     local b = Instance.new("TextButton"); b.Size = UDim2.new(1, -10, 0, 30); b.Position = UDim2.new(0, 5, 0, pos); b.BackgroundColor3 = Color3.fromRGB(25, 15, 35); b.Text = tName .. ": " .. (Config[key] and "ON" or "OFF"); b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.Gotham; b.TextSize = 13; b.Parent = Content
@@ -212,6 +262,60 @@ local function StartCheat()
             local newY = sf.frame.Position.Y.Scale + (sf.speed * dt)
             if newY > 1 then newY = -0.05; sf.frame.Position = UDim2.new(math.random(), 0, newY, 0) 
             else sf.frame.Position = UDim2.new(sf.frame.Position.X.Scale, 0, newY, 0) end
+        end
+    end)
+
+    -- ==========================================
+    -- СВАСТИКА (Векторная, через Drawing)
+    -- ==========================================
+    local DrawLines = {}
+    for i = 1, 8 do -- Увеличил до 8 линий для загибов
+        local l = Drawing.new("Line")
+        l.Thickness = 2
+        l.Visible = false
+        table.insert(DrawLines, l)
+    end
+    local angle = 0
+
+    RunService.RenderStepped:Connect(function(dt)
+        if Config.SwastikaEnabled and Camera then
+            angle = angle + Config.SwastikaSpeed * dt
+            local cX, cY = Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2
+            local s = Config.SwastikaSize
+            
+            -- Функция для поворота точки
+            local function rotate(px, py, ang)
+                local cos, sin = math.cos(ang), math.sin(ang)
+                return (px * cos - py * sin), (px * sin + py * cos)
+            end
+
+            -- Рисуем "Г" образные лучи
+            -- Луч 1 (Верхний)
+            local x1, y1 = rotate(0, -s, angle)
+            local x1b, y1b = rotate(s, -s, angle) -- Загиб
+            DrawLines[1].Visible = true; DrawLines[1].From = Vector2.new(cX, cY); DrawLines[1].To = Vector2.new(cX + x1, cY + y1); DrawLines[1].Color = Config.SwastikaColor
+            DrawLines[2].Visible = true; DrawLines[2].From = Vector2.new(cX + x1, cY + y1); DrawLines[2].To = Vector2.new(cX + x1b, cY + y1b); DrawLines[2].Color = Config.SwastikaColor
+
+            -- Луч 2 (Правый)
+            local x2, y2 = rotate(s, 0, angle)
+            local x2b, y2b = rotate(s, s, angle) 
+            DrawLines[3].Visible = true; DrawLines[3].From = Vector2.new(cX, cY); DrawLines[3].To = Vector2.new(cX + x2, cY + y2); DrawLines[3].Color = Config.SwastikaColor
+            DrawLines[4].Visible = true; DrawLines[4].From = Vector2.new(cX + x2, cY + y2); DrawLines[4].To = Vector2.new(cX + x2b, cY + y2b); DrawLines[4].Color = Config.SwastikaColor
+
+            -- Луч 3 (Нижний)
+            local x3, y3 = rotate(0, s, angle)
+            local x3b, y3b = rotate(-s, s, angle)
+            DrawLines[5].Visible = true; DrawLines[5].From = Vector2.new(cX, cY); DrawLines[5].To = Vector2.new(cX + x3, cY + y3); DrawLines[5].Color = Config.SwastikaColor
+            DrawLines[6].Visible = true; DrawLines[6].From = Vector2.new(cX + x3, cY + y3); DrawLines[6].To = Vector2.new(cX + x3b, cY + y3b); DrawLines[6].Color = Config.SwastikaColor
+
+            -- Луч 4 (Левый)
+            local x4, y4 = rotate(-s, 0, angle)
+            local x4b, y4b = rotate(-s, -s, angle)
+            DrawLines[7].Visible = true; DrawLines[7].From = Vector2.new(cX, cY); DrawLines[7].To = Vector2.new(cX + x4, cY + y4); DrawLines[7].Color = Config.SwastikaColor
+            DrawLines[8].Visible = true; DrawLines[8].From = Vector2.new(cX + x4, cY + y4); DrawLines[8].To = Vector2.new(cX + x4b, cY + y4b); DrawLines[8].Color = Config.SwastikaColor
+
+        else
+            for _, l in ipairs(DrawLines) do l.Visible = false end
         end
     end)
 
